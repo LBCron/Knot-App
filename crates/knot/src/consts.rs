@@ -461,3 +461,7 @@ pub(crate) const LINK_TOOLTIP_OFFSET: f32 = 14.;
 pub(crate) const LINK_TOOLTIP_MAX_WIDTH: f32 = 480.;
 /// The least room a link's URL label keeps from the window's edges.
 pub(crate) const LINK_TOOLTIP_WINDOW_MARGIN: f32 = 8.;
+
+/// Characters to a token, for the working turn's estimate (#35): the usual
+/// rule of thumb for English text and code.
+pub(crate) const CHARS_PER_TOKEN: usize = 4;

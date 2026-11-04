@@ -123,12 +123,14 @@ pub fn spawn_autopilot(id: Uuid, last_message: String, settings: &knot_core::Set
     {
         return false;
     }
-    // Turned off for this agent alone (#323). Here, where both triggers
-    // meet, so neither can classify a reply the user said not to.
+    // Turned off for this agent alone (#323), or stopped by a usage limit
+    // (#36): its wrap-up ends in a Stop like any turn, but an agent that
+    // cannot go on has nothing to answer. Here, where both triggers meet,
+    // so neither can classify a reply it should not.
     if sinks.agents
             .lock()
             .agent(id)
-            .is_some_and(|agent| agent.autopilot_off)
+            .is_some_and(|agent| agent.autopilot_off || agent.active_session_limit().is_some())
     {
         return false;
     }
@@ -438,6 +440,21 @@ mod tests {
     async fn an_agent_with_autopilot_turned_off_is_never_classified() {
         let (sinks, id) = sinks();
         sinks.agents.lock().set_autopilot_off(id, true);
+
+        assert!(!spawn_autopilot(id, "Should I proceed?".into(), &enabled(), sinks.clone()));
+        assert!(sinks.queue.lock().is_empty());
+    }
+
+    /// #36: a usage-limited agent's wrap-up ends in a Stop, and answering it
+    /// would only be refused.
+    #[tokio::test]
+    async fn an_agent_stopped_by_a_usage_limit_is_never_classified() {
+        let (sinks, id) = sinks();
+        {
+            let mut agents = sinks.agents.lock();
+            agents.set_session_limit(id, Some(knot_agents::SessionLimit { resets: None }));
+            agents.set_state(id, AgentState::Error);
+        }
 
         assert!(!spawn_autopilot(id, "Should I proceed?".into(), &enabled(), sinks.clone()));
         assert!(sinks.queue.lock().is_empty());

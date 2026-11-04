@@ -3,15 +3,16 @@
 //! The terminal itself (the grid, the PTY, the input encodings and the view)
 //! is the `gpui-terminal` crate. This crate is what Knot adds on top: which
 //! shell an agent runs and what it is told first ([`SessionPlan`]), the
-//! activity tracker reading the output, and the pull request scan beside it
-//! ([`TerminalSession`]); and the ACP connection a panel-mode agent talks over
-//! instead ([`AcpSession`]).
+//! activity tracker reading the output, and the pull request and session-limit
+//! scans beside it ([`TerminalSession`]); and the ACP connection a panel-mode
+//! agent talks over instead ([`AcpSession`]).
 
 mod acp_session;
 mod agent_shell;
 mod consts;
 mod pull_requests;
 mod session;
+mod session_limits;
 mod terminal_session;
 
 pub use acp_session::{

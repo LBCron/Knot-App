@@ -500,12 +500,12 @@ pub(crate) fn unread_counts_snapshot(messages: &knot_messaging::MessageStore, ag
              .collect()
 }
 
+/// A terminal agent's output tracker reporting a state. Through
+/// `set_tracked_state`, so output printed after a usage limit - the
+/// wrap-up, or the notice itself - does not lift it (#36).
 pub(crate) fn apply_terminal_status(store: &Arc<Mutex<knot_agents::AgentStore>>, agent_id: Uuid,
                                     state: knot_agents::AgentState) {
-    {
-        let mut store = store.lock();
-        store.set_state(agent_id, state);
-    }
+    store.lock().set_tracked_state(agent_id, state);
 }
 
 /// What the idle-time delivery nudge needs to know about one agent, per
