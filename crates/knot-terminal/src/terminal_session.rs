@@ -7,7 +7,6 @@
 //! and the registration prompt it may inject.
 
 use std::sync::Arc;
-use std::time::Instant;
 
 use gpui_terminal::{ExitReport, PtyTransport, Terminal, TerminalBuilder, Transport};
 use knot_activity::{EventSink, KeyEvent, Tracker, TrackerConfig, tracking_for};
@@ -92,6 +91,12 @@ impl<T: Transport> TerminalSession<T> {
         self.session_limits.lock().take()
     }
 
+    /// The limit this session reported was lifted; see
+    /// [`crate::session_limits`].
+    pub fn rearm_session_limit(&self) {
+        self.session_limits.lock().rearm();
+    }
+
     /// Stops the tracker and ends the shell.
     ///
     /// A shell that already exited is left alone: killing it again fails with
@@ -144,8 +149,7 @@ impl TerminalSession<PtyTransport> {
                                                      }
                                                      pull_requests.lock().feed(bytes);
                                                      if watch_limits {
-                                                         session_limits.lock()
-                                                                       .feed(bytes, Instant::now());
+                                                         session_limits.lock().feed(bytes);
                                                      }
                                                      on_output(bytes);
                                                  }

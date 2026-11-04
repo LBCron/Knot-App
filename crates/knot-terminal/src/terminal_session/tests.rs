@@ -255,6 +255,24 @@ async fn pty_session_output_is_scanned_for_a_usage_limit() {
         }
         assert_eq!(session.take_session_limit(), expected, "{agent_type}");
 
+        // The same notice again is the old one redrawn - until the window
+        // says the limit was lifted; then it is a new refusal.
+        for rearm in [false, true] {
+            if rearm {
+                session.rearm_session_limit();
+            }
+            session.send_command("printf 'Usage limit reached\\nhttps://github.com/acme/widget/pull/43\\n'")
+                   .unwrap();
+            let deadline = Instant::now() + PTY_TIMEOUT;
+            while session.take_pull_request_urls().is_empty() {
+                assert!(Instant::now() < deadline, "the output never arrived");
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            assert_eq!(session.take_session_limit(),
+                       expected.clone().filter(|_| rearm),
+                       "{agent_type}, rearmed: {rearm}");
+        }
+
         session.shutdown().unwrap();
     }
 }

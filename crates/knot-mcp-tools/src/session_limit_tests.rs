@@ -65,3 +65,23 @@ async fn a_submitted_prompt_lifts_the_limit() {
     assert_eq!(agent.state, AgentState::Running);
     assert_eq!(agent.session_limit, None);
 }
+
+/// A permission the wrap-up asks for shows over the limit, which is back
+/// once the wrap-up carries on (#377 review).
+#[tokio::test]
+async fn a_permission_prompt_shows_over_the_limit() {
+    let cat = catalog();
+    let id = limited(&cat);
+
+    cat.status(&hook(id, "PermissionRequest", "input")).unwrap();
+    tokio::task::yield_now().await;
+    assert_eq!(cat.agents.lock().agent(id).unwrap().state,
+               AgentState::Input);
+
+    cat.status(&hook(id, "PreToolUse", "running")).unwrap();
+    tokio::task::yield_now().await;
+    let agents = cat.agents.lock();
+    let agent = agents.agent(id).unwrap();
+    assert_eq!(agent.state, AgentState::Error);
+    assert!(agent.active_session_limit().is_some());
+}

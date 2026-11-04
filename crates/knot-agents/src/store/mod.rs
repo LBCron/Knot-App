@@ -255,18 +255,43 @@ impl AgentStore {
     }
 
     /// Sets `id`'s state as a terminal agent's output tracker or hooks
-    /// inferred it (#36). While the agent shows a session limit only
-    /// [`AgentState::Error`] lands: the wrap-up a Claude session is allowed
-    /// past its limit goes on printing, calling tools and ends in a Stop,
-    /// and none of that lifts the limit. A prompt the user submits does, by
-    /// clearing it through [`Self::set_session_limit`] first.
+    /// inferred it (#36).
+    ///
+    /// While the agent is held by a session limit - in Error with one, or
+    /// in Input over one - Working and Idle do not land: the wrap-up a
+    /// Claude session is allowed past its limit goes on printing, calling
+    /// tools and ends in a Stop, and none of that lifts the limit. They put
+    /// the agent back in Error instead. Input does land, keeping the limit
+    /// underneath: a permission the wrap-up asks for needs the user more
+    /// urgently than a limit they can do nothing about. A prompt the user
+    /// submits lifts the limit, by clearing it through
+    /// [`Self::set_session_limit`] first.
     pub fn set_tracked_state(&mut self, id: Uuid, state: AgentState) {
-        let limited = self.agent(id)
-                          .is_some_and(|agent| agent.active_session_limit().is_some());
-        if limited && state != AgentState::Error {
+        let held = self.agent(id).is_some_and(|agent| {
+                                     agent.session_limit.is_some()
+                                     && matches!(agent.state, AgentState::Error | AgentState::Input)
+                                 });
+        if !held {
+            self.set_state(id, state);
             return;
         }
-        self.set_state(id, state);
+        let shown = if state == AgentState::Input {
+            AgentState::Input
+        }
+        else {
+            AgentState::Error
+        };
+        let changed = self.agent(id).is_some_and(|agent| agent.state != shown);
+        // Not through `set_state`, which would drop the limit with Error.
+        self.update(id, |agent| {
+                if shown != AgentState::Input {
+                    agent.awaiting_reason = None;
+                }
+                agent.state = shown;
+            });
+        if changed {
+            self.revise();
+        }
     }
 
     /// Records why `id` is waiting on the user; see

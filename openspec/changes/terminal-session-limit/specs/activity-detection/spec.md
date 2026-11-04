@@ -7,7 +7,8 @@
 When a Terminal-mode Claude agent's output has a line opening with a usage
 limit notice, the system SHALL show the agent's Session limit status, with the
 reset time the notice gives, and SHALL keep it through further output and hook
-reports until the user submits a prompt.
+reports until the user submits a prompt; a permission prompt SHALL show over
+it while it is pending.
 
 #### Scenario: The wrap-up allowance
 
@@ -15,6 +16,18 @@ reports until the user submits a prompt.
   up" and goes on working, then stops
 - **THEN** its dot turns red with "Session limit" when the notice appears, and
   stays so while it works and after it stops
+
+#### Scenario: A permission during the wrap-up
+
+- **WHEN** a limited agent's wrap-up asks for a permission
+- **THEN** the agent shows Awaiting input until it is answered, and then
+  Session limit again
+
+#### Scenario: Refused again after the lift
+
+- **WHEN** the user submits a prompt to a limited agent and it is refused
+  with the same notice as before
+- **THEN** the agent shows Session limit again
 
 #### Scenario: The next prompt lifts it
 

@@ -145,7 +145,8 @@ refused with a session or usage limit ("You've hit your session limit · resets 
 limit instead, in red, until you send it another prompt. A Claude agent in the terminal does the
 same when it prints a usage-limit notice - including "Usage limit reached · wrapping up", when Claude
 lets it finish what it was doing first: it stays Session limit through the wrap-up and after it, until
-you submit another prompt, and Autopilot leaves it alone. The dashboard's cards add a
+you submit another prompt, and Autopilot leaves it alone. A permission the wrap-up asks for still shows
+as Awaiting input, and the agent goes back to Session limit once you answer it. The dashboard's cards add a
 glanceable working/thinking indicator that reflects the same status and animates on each change; the
 sidebar row does not draw it.
 

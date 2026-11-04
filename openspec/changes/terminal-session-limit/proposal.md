@@ -19,7 +19,9 @@ needed there.
   notice gives one.
 - The status holds through the wrap-up: further output, tool-use hooks and
   the closing Stop do not move it, and Autopilot does not answer that Stop.
-  The next prompt the user submits lifts it.
+  A permission prompt during the wrap-up shows as Awaiting input over it.
+  The next prompt the user submits lifts it, and the same notice after that
+  is reported again.
 
 ## Impact
 

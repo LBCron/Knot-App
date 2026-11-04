@@ -39,8 +39,9 @@ pub(crate) const AGENT_COLORTERM: &str = "truecolor";
 /// The notices, lower-case, that open a line of Claude Code's output when
 /// its session hits a usage limit (#36): the hard stop, and the wrap-up
 /// allowance it may grant first ("Usage limit reached · wrapping up").
-/// Matched at the start of a line, not anywhere in it, so an agent writing
-/// about limits does not stop itself.
+/// Matched at the start of a line and followed by nothing or by
+/// [`SESSION_LIMIT_SEPARATORS`], so an agent writing about limits does not
+/// stop itself.
 pub(crate) const SESSION_LIMIT_NOTICES: &[&str] = &["usage limit reached",
                                                     "you've hit your session limit",
                                                     "you've hit your usage limit"];
@@ -50,8 +51,7 @@ pub(crate) const SESSION_LIMIT_NOTICES: &[&str] = &["usage limit reached",
 /// also bounds what the scan buffers between chunks.
 pub(crate) const SESSION_LIMIT_MAX_LINE: usize = 256;
 
-/// How long a notice already reported stays reported. The terminal UI
-/// redraws its status area every frame, so one notice is seen many times;
-/// the same text after this long is a new limit - limits run for hours.
-pub(crate) const SESSION_LIMIT_REPEAT: std::time::Duration =
-    std::time::Duration::from_secs(60 * 60);
+/// What may follow a notice's phrase on its line: Claude Code's "·" before
+/// the reset time or "wrapping up", or a sentence's end.
+pub(crate) const SESSION_LIMIT_SEPARATORS: &[char] =
+    &['\u{b7}', '.', ',', '\u{2014}', '-', '(', '!'];

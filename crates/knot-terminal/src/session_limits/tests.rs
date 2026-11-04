@@ -1,11 +1,9 @@
 //! The session-limit scan over raw PTY output (#36).
 
-use std::time::{Duration, Instant};
-
 use knot_agents::SessionLimit;
 
 use super::SessionLimitTap;
-use crate::consts::{SESSION_LIMIT_MAX_LINE, SESSION_LIMIT_REPEAT};
+use crate::consts::SESSION_LIMIT_MAX_LINE;
 
 const HARD_STOP: &str = "You've hit your session limit · resets 5:20pm (America/Los_Angeles)";
 
@@ -15,9 +13,8 @@ fn resets(at: &str) -> Option<SessionLimit> {
 
 fn scan(chunks: &[&[u8]]) -> Option<SessionLimit> {
     let mut tap = SessionLimitTap::default();
-    let now = Instant::now();
     for chunk in chunks {
-        tap.feed(chunk, now);
+        tap.feed(chunk);
     }
     tap.take()
 }
@@ -66,6 +63,9 @@ fn a_cursor_move_starts_a_new_line() {
 fn a_notice_not_opening_a_short_line_is_not_one() {
     assert_eq!(scan(&[b"\xe2\x97\x8f I checked: usage limit reached is matched.\n"]),
                None);
+    // Opening the line, but prose: the phrase runs on into a sentence.
+    assert_eq!(scan(&[b"\xe2\x97\x8f Usage limit reached is now detected in the tap.\n"]),
+               None);
     let long = format!("Usage limit reached {}\n",
                        "x".repeat(SESSION_LIMIT_MAX_LINE));
     assert_eq!(scan(&[long.as_bytes()]), None);
@@ -75,26 +75,26 @@ fn a_notice_not_opening_a_short_line_is_not_one() {
 #[test]
 fn a_redrawn_notice_is_reported_once() {
     let mut tap = SessionLimitTap::default();
-    let start = Instant::now();
     let line = format!("{HARD_STOP}\r\n");
 
-    tap.feed(line.as_bytes(), start);
+    tap.feed(line.as_bytes());
     assert!(tap.take().is_some());
-    tap.feed(line.as_bytes(), start + Duration::from_secs(1));
+    tap.feed(line.as_bytes());
     assert_eq!(tap.take(), None);
 }
 
-/// Hours on, the same text is a new limit, not the old one redrawn.
+/// Lifted by a submitted prompt, then refused again with the same reset
+/// time: that is a new limit, and is reported (#377 review).
 #[test]
-fn the_same_notice_after_the_repeat_window_is_reported_again() {
+fn the_same_notice_after_a_lift_is_reported_again() {
     let mut tap = SessionLimitTap::default();
-    let start = Instant::now();
     let line = format!("{HARD_STOP}\r\n");
 
-    tap.feed(line.as_bytes(), start);
+    tap.feed(line.as_bytes());
     tap.take();
-    tap.feed(line.as_bytes(), start + SESSION_LIMIT_REPEAT);
-    assert!(tap.take().is_some());
+    tap.rearm();
+    tap.feed(line.as_bytes());
+    assert_eq!(tap.take(), resets("5:20pm (America/Los_Angeles)"));
 }
 
 /// The wrap-up notice first, then the hard stop with its reset: the second
@@ -102,11 +102,10 @@ fn the_same_notice_after_the_repeat_window_is_reported_again() {
 #[test]
 fn a_different_notice_is_reported() {
     let mut tap = SessionLimitTap::default();
-    let now = Instant::now();
 
-    tap.feed(b"Usage limit reached\n", now);
+    tap.feed(b"Usage limit reached\n");
     tap.take();
-    tap.feed(format!("{HARD_STOP}\n").as_bytes(), now);
+    tap.feed(format!("{HARD_STOP}\n").as_bytes());
     assert_eq!(tap.take(), resets("5:20pm (America/Los_Angeles)"));
 }
 

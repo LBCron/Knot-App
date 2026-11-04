@@ -13,10 +13,14 @@ use super::WorkspaceWindow;
 
 impl WorkspaceWindow {
     /// Take every terminal session's announced limit into the store,
-    /// returning whether any landed.
+    /// returning whether any landed; and re-arm the scan of every session
+    /// whose limit has since been lifted.
     ///
     /// The limit is written before the state, as the panel path does, so
-    /// the frame that turns the dot red already says why.
+    /// the frame that turns the dot red already says why. The re-arm is what
+    /// lets a prompt refused again after a lift - with the same "resets" as
+    /// the refusal before it - show the limit again, rather than read as the
+    /// old notice redrawn.
     pub(super) fn drain_session_limits(&mut self) -> bool {
         let seen = self.sessions
                        .iter()
@@ -26,14 +30,27 @@ impl WorkspaceWindow {
                                   .map(|limit| (*id, limit))
                        })
                        .collect::<Vec<(Uuid, _)>>();
-        if seen.is_empty() {
-            return false;
+        let landed = !seen.is_empty();
+        let lifted = {
+            let mut store = self.store.lock();
+            for (id, limit) in seen {
+                store.set_session_limit(id, Some(limit));
+                store.set_state(id, knot_agents::AgentState::Error);
+            }
+            self.sessions
+                .keys()
+                .filter(|id| {
+                    store.agent(**id)
+                         .is_some_and(|agent| agent.session_limit.is_none())
+                })
+                .copied()
+                .collect::<Vec<Uuid>>()
+        };
+        for id in lifted {
+            if let Some(session) = self.sessions.get(&id) {
+                session.lock().rearm_session_limit();
+            }
         }
-        let mut store = self.store.lock();
-        for (id, limit) in seen {
-            store.set_session_limit(id, Some(limit));
-            store.set_state(id, knot_agents::AgentState::Error);
-        }
-        true
+        landed
     }
 }
