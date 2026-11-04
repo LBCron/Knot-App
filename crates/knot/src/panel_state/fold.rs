@@ -182,6 +182,9 @@ impl PanelState {
     /// or this is the first message) - per the "Rapid successive text
     /// deltas" scenario: deltas accumulate into one message, not several.
     fn append_text(&mut self, text: String) {
+        if self.turn_active {
+            self.turn_text_chars += text.chars().count();
+        }
         if let Some(PanelMessage::Assistant(existing)) = self.messages.last_mut() {
             existing.push_str(&text);
         }

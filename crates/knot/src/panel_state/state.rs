@@ -52,6 +52,11 @@ pub struct PanelState {
     /// decision - the last message's action bar (copy needs stable text)
     /// and its track toggle are mutually exclusive on this flag.
     pub turn_active:                bool,
+    /// When the running turn began - the prompt that started it (#35).
+    pub turn_started_at:            Option<SystemTime>,
+    /// Characters of reply streamed in the running turn, for its token
+    /// estimate (#35).
+    pub turn_text_chars:            usize,
     /// The usage limit the last turn ended on, if it ended on one (#318):
     /// the agent shows "Session limit" until the user sends again. Set by
     /// [`Self::push_error`], cleared by the next prompt.
@@ -220,6 +225,8 @@ impl PanelState {
         self.times.go_live(&self.messages, &mut self.sent_at);
         self.push_message(PanelMessage::User(text));
         self.turn_active = true;
+        self.turn_started_at = Some(SystemTime::now());
+        self.turn_text_chars = 0;
         // A new turn tries again; if the limit still holds, its error sets
         // this back.
         self.session_limit = None;

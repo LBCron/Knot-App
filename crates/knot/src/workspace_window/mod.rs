@@ -21,6 +21,8 @@ mod chrome;
 mod creation;
 #[cfg(test)]
 mod creation_tests;
+#[cfg(test)]
+mod git_folder_tests;
 mod git_panel;
 #[cfg(test)]
 mod inbox_nudge_tests;
