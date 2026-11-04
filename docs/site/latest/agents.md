@@ -142,7 +142,11 @@ wait Autopilot started says what it read in the agent's last reply (`Autopilot: 
 you a question`). The reason goes as soon as the agent leaves Awaiting input. A session that exits non-zero, or
 a panel connection that ends with an error, moves the agent to Error. A panel agent whose turn is
 refused with a session or usage limit ("You've hit your session limit · resets 5:20pm") shows Session
-limit instead, in red, until you send it another prompt. The dashboard's cards add a
+limit instead, in red, until you send it another prompt. A Claude agent in the terminal does the
+same when it prints a usage-limit notice - including "Usage limit reached · wrapping up", when Claude
+lets it finish what it was doing first: it stays Session limit through the wrap-up and after it, until
+you submit another prompt, and Autopilot leaves it alone. A permission the wrap-up asks for still shows
+as Awaiting input, and the agent goes back to Session limit once you answer it. The dashboard's cards add a
 glanceable working/thinking indicator that reflects the same status and animates on each change; the
 sidebar row does not draw it.
 
