@@ -160,7 +160,13 @@ long time thinking reads low.
 
 A permission request appears inline with its options as buttons, names the tool it is for, and
 blocks further prompts until you answer. A message sent while a response is in progress is queued
-and delivered when the turn ends; a stop control interrupts the active turn. You can switch one
+and delivered when the turn ends; a stop control interrupts the active turn.
+
+A message sent to an agent stopped by its session limit is queued too, and goes on its own when the
+limit resets - "resets 5:20pm (America/Los_Angeles)" is read as the next 5:20 pm in that zone. Its
+row says it is waiting for the session limit and offers **Send now**, which sends it next without
+waiting. If the provider gives no reset time Knot can read, queued messages wait until you choose
+Send now. You can switch one
 agent between the panel and the raw terminal without interrupting its turn or terminal process, and
 each agent remembers the mode you last chose.
 

@@ -6,11 +6,28 @@
 //! text. Nothing else distinguishes it from any other failed turn, and it is
 //! the one failure the user can do nothing about but wait.
 
+use std::time::{Duration, SystemTime};
+
 /// Phrases, lower-case, that mark an error as a usage limit.
 const LIMIT_PHRASES: [&str; 2] = ["session limit", "usage limit"];
 
 /// Where the reset time starts, lower-case.
 const RESETS: &str = "resets ";
+
+/// Hours on a 12-hour clock.
+const HALF_DAY: i8 = 12;
+
+/// How far past our clock a reset time may be and still be read as the
+/// reset that is due now rather than tomorrow's (#368 review). A provider
+/// whose clock runs a little behind refuses a prompt sent just after the
+/// reset with the same "resets 5:20pm"; read literally that is 24 hours
+/// away.
+const LATE_RESET_GRACE: Duration = Duration::from_secs(15 * 60);
+
+/// When to try again after such a late reset. Not at once: a held prompt
+/// sent the moment the hold lifts, and refused again with the same reset,
+/// would otherwise go round as fast as the queue runs.
+const LATE_RESET_RETRY: Duration = Duration::from_secs(60);
 
 /// An agent's session has hit its usage limit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +53,71 @@ impl SessionLimit {
                           .map(str::to_owned);
         Some(Self { resets })
     }
+
+    /// When the limit lifts, for one reported at `refused_at` (#368): the
+    /// next time the clock in [`Self::resets`] reads its time of day, in the
+    /// zone it names - "5:20pm (America/Los_Angeles)", "9am (Europe/Paris)".
+    ///
+    /// `None` when there is no reset time, or one in a shape this does not
+    /// read (a date, a duration) or naming a zone the system does not know:
+    /// a time it is not sure of is no time to send a held prompt at.
+    #[must_use]
+    pub fn lifts_at(&self, refused_at: SystemTime) -> Option<SystemTime> {
+        let (clock, zone) = self.resets.as_deref()?.split_once('(')?;
+        let zone = zone.trim().strip_suffix(')')?.trim();
+        let (hour, minute) = parse_clock(clock.trim())?;
+        let zone = jiff::tz::TimeZone::get(zone).ok()?;
+        let refused = jiff::Timestamp::try_from(refused_at).ok()?
+                                                           .to_zoned(zone.clone());
+        let same_day = refused.date()
+                              .at(hour, minute, 0, 0)
+                              .to_zoned(zone.clone())
+                              .ok()?;
+        let same_day = SystemTime::from(same_day.timestamp());
+        if same_day > refused_at {
+            return Some(same_day);
+        }
+        // Only just past by our clock: the provider's runs behind, and the
+        // reset is due now. Retry shortly rather than wait a day.
+        if refused_at.duration_since(same_day)
+                     .is_ok_and(|late| late <= LATE_RESET_GRACE)
+        {
+            return Some(refused_at + LATE_RESET_RETRY);
+        }
+        let tomorrow = refused.date()
+                              .tomorrow()
+                              .ok()?
+                              .at(hour, minute, 0, 0)
+                              .to_zoned(zone)
+                              .ok()?;
+        Some(tomorrow.timestamp().into())
+    }
+}
+
+/// A 12-hour clock time - "5:20pm", "9am", "12:05 AM" - as a 24-hour hour
+/// and minute.
+fn parse_clock(clock: &str) -> Option<(i8, i8)> {
+    let lower = clock.to_ascii_lowercase();
+    let (digits, afternoon) = if let Some(digits) = lower.strip_suffix("pm") {
+        (digits, true)
+    }
+    else {
+        (lower.strip_suffix("am")?, false)
+    };
+    let (hour, minute) = match digits.trim().split_once(':') {
+        Some((hour, minute)) => (hour.parse::<i8>().ok()?, minute.parse::<i8>().ok()?),
+        None => (digits.trim().parse::<i8>().ok()?, 0),
+    };
+    if !(1..=HALF_DAY).contains(&hour) || !(0..60).contains(&minute) {
+        return None;
+    }
+    let hour = match (hour, afternoon) {
+        (HALF_DAY, false) => 0,
+        (HALF_DAY, true) => HALF_DAY,
+        (hour, true) => hour + HALF_DAY,
+        (hour, false) => hour,
+    };
+    Some((hour, minute))
 }
 
 #[cfg(test)]

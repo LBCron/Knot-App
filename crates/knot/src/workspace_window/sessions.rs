@@ -142,6 +142,7 @@ impl WorkspaceWindow {
     /// `git`. `knot-git` is runtime-agnostic by contract, hence
     /// `spawn_blocking` rather than an async call.
     pub(super) fn refresh_diff_stats(&mut self, id: Uuid, folder: &str) {
+        self.follow_git_folder(id, folder);
         let Some(writer) = self.diff_stats
                                .claim_refresh(id, crate::diff_stats::MAX_AGE)
         else {
@@ -290,6 +291,7 @@ impl WorkspaceWindow {
         self.panel_lists.remove(&id);
         self.panel_list_row_counts.remove(&id);
         self.panel_finds.remove(&id);
+        self.git_read_folders.forget(id);
         self.panel_pending_context.remove(&id);
         self.panel_composer_styling.remove(&id);
         self.forget_panel_mentions(id);

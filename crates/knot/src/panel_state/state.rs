@@ -61,6 +61,9 @@ pub struct PanelState {
     /// the agent shows "Session limit" until the user sends again. Set by
     /// [`Self::push_error`], cleared by the next prompt.
     pub session_limit:              Option<knot_agents::SessionLimit>,
+    /// When [`Self::session_limit`] lifts, if its reset time could be read
+    /// (#368). Set and cleared with it, so the two never disagree.
+    pub session_limit_lifts_at:     Option<std::time::SystemTime>,
     /// Whether the in-flight response should auto-scroll to follow new
     /// content, per the track toggle's per-response scope (design decision
     /// "Track toggle scope"). Reset to `true` at the start of each turn.
@@ -227,6 +230,7 @@ impl PanelState {
         // A new turn tries again; if the limit still holds, its error sets
         // this back.
         self.session_limit = None;
+        self.session_limit_lifts_at = None;
         self.tracking = follow;
     }
 
@@ -271,8 +275,21 @@ impl PanelState {
     /// [`Self::session_limit`], which is what turns the agent's dot red.
     pub fn push_error(&mut self, text: String) {
         self.session_limit = knot_agents::SessionLimit::from_error(&text);
+        self.session_limit_lifts_at =
+            self.session_limit
+                .as_ref()
+                .and_then(|limit| limit.lifts_at(std::time::SystemTime::now()));
         self.push_message(PanelMessage::Error(text));
         self.turn_active = false;
+    }
+
+    /// Whether a prompt to this session waits for its usage limit to lift
+    /// rather than going now (#368): a limit stands and `now` is before the
+    /// time it lifts. A limit whose reset time could not be read holds until
+    /// the user sends a prompt anyway - a time it is not sure of is no time
+    /// to send at.
+    pub fn held_by_session_limit(&self, now: std::time::SystemTime) -> bool {
+        self.session_limit.is_some() && self.session_limit_lifts_at.is_none_or(|lifts| now < lifts)
     }
 
     /// Records a `!` command the user just submitted, per

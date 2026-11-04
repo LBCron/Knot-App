@@ -545,7 +545,11 @@ impl WorkspaceWindow {
                 panel_session::PanelSessionSlot::Ready(handle) => {
                     let state = handle.state();
                     let state = state.lock();
-                    let ready = state.pending_permission.is_none() && !state.turn_active;
+                    // A session held by its usage limit queues the prompt
+                    // instead, to go when the limit lifts (#368).
+                    let ready = state.pending_permission.is_none()
+                                && !state.turn_active
+                                && !state.held_by_session_limit(std::time::SystemTime::now());
                     drop(state);
                     ready.then(|| {
                              handle.record_prompt(text.clone(), follow);
@@ -632,6 +636,9 @@ impl WorkspaceWindow {
             if state.pending_permission.is_some() || state.turn_active {
                 return None;
             }
+            // Checked every tick, so a held prompt goes on the first one
+            // after the limit lifts (#368).
+            let held = state.held_by_session_limit(std::time::SystemTime::now());
             drop(state);
             // `turn_active` flips only once the spawned prompt reaches the
             // session, so without this a tick in between would send the
@@ -640,7 +647,7 @@ impl WorkspaceWindow {
                 return None;
             }
             let queue = self.panel_prompt_queues.get_mut(&id)?;
-            let prompt = prompt_queue::take_next(queue)?;
+            let prompt = prompt_queue::take_next(queue, held)?;
             handle.record_prompt(prompt.text.clone(), prompt.origin.follows(reader_at_tail));
             let sent = (handle.session(), handle.recorder(), prompt.text.clone(), prompt.id);
             self.panel_prompts_in_flight.insert(id, prompt);

@@ -20,6 +20,7 @@
 mod attachments;
 pub(super) mod find_bar;
 pub(crate) mod input;
+mod limit_hold;
 pub(crate) mod lookup;
 pub(crate) mod mentions;
 mod pane;
