@@ -14,7 +14,6 @@ use gpui_kit::div;
 use gpui_kit::px;
 use uuid::Uuid;
 
-use crate::app_state::state_color;
 use crate::app_state::state_tooltip;
 
 /// Agent `id`'s state dot. Hovering it names the state, as the header does
@@ -35,7 +34,9 @@ pub(super) fn status_dot(id: Uuid, state: knot_agents::AgentState, detail: DotDe
          .w(px(8.))
          .h(px(8.))
          .rounded_full()
-         .bg(state_color(state, palette))
+         .bg(crate::app_state::status_color(state,
+                                            session_limit.as_ref(),
+                                            palette))
          .tooltip(move |window, cx| {
              Tooltip::new(state_tooltip(state,
                                         idle_since,
