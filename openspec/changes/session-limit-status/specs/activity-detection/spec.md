@@ -26,3 +26,16 @@ provider said and there is room.
 
 - **WHEN** a Panel-mode agent's prompt is answered with any other error
 - **THEN** the agent goes Idle, as before
+
+### Requirement: A session limit is drawn bold and red
+
+A session limit SHALL be drawn in a stronger, more saturated red than Error's:
+the dot in that red, and the "Session limit" label as a bold badge of white
+text on red. Both SHALL meet the contrast every status colour is held to, in
+both appearances.
+
+#### Scenario: The session limit is drawn bold and red
+
+- **WHEN** an agent is stopped by its session limit in the dark appearance
+- **THEN** its dot is a more saturated red than an errored agent's, and the
+  header and dashboard card show "Session limit" as a bold white-on-red badge

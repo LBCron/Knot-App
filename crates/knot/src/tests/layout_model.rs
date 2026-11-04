@@ -222,3 +222,27 @@ fn a_session_limit_is_named_in_place_of_error() {
                                                               && !line.contains("%{")
                                                           }));
 }
+
+/// #369: an agent stopped by a session limit gets the palette's stronger
+/// `session_limit` red for its dot, not `error`'s peach; any other error
+/// keeps `error`'s.
+#[test]
+fn a_session_limit_dot_is_the_stronger_red() {
+    let error = knot_agents::AgentState::Error;
+    let limit = knot_agents::SessionLimit { resets: None };
+    for palette in [crate::consts::LIGHT_STATUS_PALETTE,
+                    crate::consts::DARK_STATUS_PALETTE]
+    {
+        let limited: gpui_kit::Hsla = gpui_kit::rgb(palette.session_limit).into();
+        let plain: gpui_kit::Hsla = gpui_kit::rgb(palette.error).into();
+
+        assert_eq!(crate::app_state::status_color(error, Some(&limit), &palette),
+                   limited);
+        assert_eq!(crate::app_state::status_color(error, None, &palette), plain);
+        assert_eq!(crate::app_state::status_color(knot_agents::AgentState::Idle,
+                                                  Some(&limit),
+                                                  &palette),
+                   crate::app_state::state_color(knot_agents::AgentState::Idle, &palette),
+                   "a limit only colours an agent it has stopped");
+    }
+}
