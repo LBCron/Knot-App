@@ -851,6 +851,10 @@ pull_requests:
   open_in_browser: "Open in Browser"
   copy_url: "Copy URL"
 
+# A background adapter update check finding an update (#367).
+adapter_updates:
+  notification_title: "Knot - Adapter update"
+  notification_body: "%{adapter} %{version} is available. Update it in Settings > Coding."
 mcp_server:
   failure_title: "Knot - MCP server"
   failure_body: "The MCP server is not running. Agents cannot reach Knot until it recovers."
