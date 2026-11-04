@@ -6,7 +6,7 @@
 //! text. Nothing else distinguishes it from any other failed turn, and it is
 //! the one failure the user can do nothing about but wait.
 
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 /// Phrases, lower-case, that mark an error as a usage limit.
 const LIMIT_PHRASES: [&str; 2] = ["session limit", "usage limit"];
@@ -16,6 +16,18 @@ const RESETS: &str = "resets ";
 
 /// Hours on a 12-hour clock.
 const HALF_DAY: i8 = 12;
+
+/// How far past our clock a reset time may be and still be read as the
+/// reset that is due now rather than tomorrow's (#368 review). A provider
+/// whose clock runs a little behind refuses a prompt sent just after the
+/// reset with the same "resets 5:20pm"; read literally that is 24 hours
+/// away.
+const LATE_RESET_GRACE: Duration = Duration::from_secs(15 * 60);
+
+/// When to try again after such a late reset. Not at once: a held prompt
+/// sent the moment the hold lifts, and refused again with the same reset,
+/// would otherwise go round as fast as the queue runs.
+const LATE_RESET_RETRY: Duration = Duration::from_secs(60);
 
 /// An agent's session has hit its usage limit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,18 +73,24 @@ impl SessionLimit {
                               .at(hour, minute, 0, 0)
                               .to_zoned(zone.clone())
                               .ok()?;
-        let lifts = if same_day.timestamp() > refused.timestamp() {
-            same_day
+        let same_day = SystemTime::from(same_day.timestamp());
+        if same_day > refused_at {
+            return Some(same_day);
         }
-        else {
-            refused.date()
-                   .tomorrow()
-                   .ok()?
-                   .at(hour, minute, 0, 0)
-                   .to_zoned(zone)
-                   .ok()?
-        };
-        Some(lifts.timestamp().into())
+        // Only just past by our clock: the provider's runs behind, and the
+        // reset is due now. Retry shortly rather than wait a day.
+        if refused_at.duration_since(same_day)
+                     .is_ok_and(|late| late <= LATE_RESET_GRACE)
+        {
+            return Some(refused_at + LATE_RESET_RETRY);
+        }
+        let tomorrow = refused.date()
+                              .tomorrow()
+                              .ok()?
+                              .at(hour, minute, 0, 0)
+                              .to_zoned(zone)
+                              .ok()?;
+        Some(tomorrow.timestamp().into())
     }
 }
 

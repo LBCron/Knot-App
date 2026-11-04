@@ -81,3 +81,28 @@ fn a_reset_it_cannot_read_has_no_time() {
     }
     assert_eq!(SessionLimit { resets: None }.lifts_at(refused_at()), None);
 }
+
+/// #368 review: a provider whose clock runs behind refuses a prompt sent
+/// just after the reset with the same reset time. That is the reset due now,
+/// so it retries in a minute - not at once, which would loop, and not
+/// tomorrow, which would hold the prompt for a day.
+#[test]
+fn a_reset_only_just_past_retries_shortly() {
+    // Refused at 13:00:30 in Paris; the 12:59 reset was ninety seconds ago.
+    let refused = refused_at();
+    let late = limit("12:59pm (Europe/Paris)").lifts_at(refused
+                                                        + std::time::Duration::from_secs(30))
+                                              .expect("a reset time");
+    assert_eq!(late,
+               refused + std::time::Duration::from_secs(30 + 60),
+               "a minute after the refusal");
+}
+
+/// Further past than the grace, it is tomorrow's reset.
+#[test]
+fn a_reset_well_past_is_tomorrows() {
+    // 13:00 in Paris; 12:40 was twenty minutes ago, so it is 12:40 on the
+    // 5th: 11:40 UTC.
+    assert_eq!(limit("12:40pm (Europe/Paris)").lifts_at(refused_at()),
+               Some(utc(1_793_793_600 + 23 * 3600 + 40 * 60)));
+}
