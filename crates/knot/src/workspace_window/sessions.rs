@@ -173,7 +173,7 @@ impl WorkspaceWindow {
                               .iter()
                               .filter_map(|id| store.agent(*id))
                               .filter(|agent| !agent.is_companion)
-                              .map(|agent| (agent.id, agent.folder.clone()))
+                              .map(|agent| (agent.id, agent.effective_folder().to_owned()))
                               .collect::<Vec<_>>()
                  })
                  .unwrap_or_default()
