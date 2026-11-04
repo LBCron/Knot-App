@@ -136,6 +136,13 @@ and Escape to Idle. A permission answered any other way, such as cancelled by St
 ending, takes the agent out of Awaiting input as soon as it is answered. A shell agent stays Idle
 whatever its output.
 
+A Codex agent also warns before it reaches the limit. When Codex has used 75% or more of its 5-hour or
+weekly allowance, a banner over the agent reads **Approaching usage limit**, says when that window
+resets, and offers **Get more usage**, which opens Codex's usage settings. Dismiss it with the ×; it
+stays dismissed until that window resets. Knot reads these figures from Codex's own session files
+(`~/.codex/sessions`, or under `$CODEX_HOME`) and shows nothing if they are missing. Claude agents
+don't show this yet: their ACP adapter doesn't report usage.
+
 An agent in Awaiting input says why when it knows: hover its state dot, or read the line under its
 dashboard card. A pending permission request shows its title (`permission requested for Bash`); a
 wait Autopilot started says what it read in the agent's last reply (`Autopilot: the last reply asks

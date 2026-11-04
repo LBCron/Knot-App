@@ -280,6 +280,9 @@ pub const DEFAULT: &str = CLAUDE;
 /// a shell companion, or the editor stating what a companion must be.
 pub const SHELL: &str = "shell";
 
+/// OpenAI's Codex CLI: the agent whose usage allowance Knot can read (#291).
+pub const CODEX: &str = "codex";
+
 /// What is known about `id`, or `None` for a type this build does not
 /// recognize - which is a working agent that launches through the terminal
 /// path, not an error.

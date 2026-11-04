@@ -1128,3 +1128,11 @@ prompt_variables:
   date: "today's date"
   clipboard: "the clipboard's text"
   clipboard_in_startup: "{{clipboard}} is always empty in a startup prompt, which is sent without you choosing it."
+
+# The banner over a Codex agent's pane when its usage allowance is nearly
+# spent (#291). `when` is the reset as a local date and time.
+usage:
+  approaching_limit: "Approaching usage limit"
+  resets_at: "Resets at %{when}"
+  get_more: "Get more usage"
+  dismiss: "Dismiss"
