@@ -142,6 +142,7 @@ fn agent_card(agent: &DashboardAgent, muted: gpui_kit::Hsla, palette: &'static S
     let folder_name = agent.folder_name.clone();
     let header_title = agent.header_title.clone();
     let status = crate::app_state::status_label(agent.state, agent.session_limit.as_ref(), false);
+    let limited = agent.state == knot_agents::AgentState::Error && agent.session_limit.is_some();
     // The line under the title: why the agent waits, or when its limit
     // lifts.
     let input_reason = agent.input_reason.clone().or_else(|| {
@@ -194,10 +195,16 @@ fn agent_card(agent: &DashboardAgent, muted: gpui_kit::Hsla, palette: &'static S
                            .child(div().flex_shrink_0()
                                        .child(crate::working_indicator::render(state, is_running, palette)))
                            .children((!is_shell).then(|| {
-                                                    div().text_sm()
-                                                         .flex_shrink_0()
-                                                         .text_color(state_color(state, palette))
-                                                         .child(status)
+                                                    // A session limit is a badge, bold
+                                                    // and red (#369).
+                                                    if limited {
+                                                        crate::app_state::session_limit_badge(status, palette)
+                                                    }
+                                                    else {
+                                                        div().text_color(state_color(state, palette)).child(status)
+                                                    }
+                                                    .text_sm()
+                                                    .flex_shrink_0()
                                                 })))
             .children((!header_title.is_empty()).then(|| {
                                                     div().text_sm()
