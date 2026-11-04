@@ -117,6 +117,10 @@ Right-clicking the empty space in the sidebar opens a workspace menu: New Agent,
 Restart All, Close All, Deactivate All, and Broadcast to All Agents…. Every item is shown, with the
 ones that do not apply disabled; New from Bench deploys a saved template.
 
+Drag the sidebar narrower than 160px and it turns compact: each agent is just its avatar, with its
+state dot on the corner. Rest the pointer on an avatar to see the agent's name, its state (such as
+"Awaiting input" and why) and what it says it is doing.
+
 ## Activity status
 
 Each running agent has one status, shown on its sidebar state dot and its dashboard card and used to
