@@ -6,6 +6,7 @@
 //! newer path replaced.
 
 mod about_window;
+mod adapter_updates;
 mod agent_editor;
 mod agent_menu;
 mod agent_menu_entries;

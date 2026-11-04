@@ -18,7 +18,7 @@ when it opens. Switching tabs preserves in-progress text.
 | Tab | Sections and controls |
 |---|---|
 | General | Appearance (Auto/System/Light/Dark); Startup ("Restore agents on launch", "Restore last conversation" - enabled only while agent restore is on, keeping its value when off, "Re-open workspaces on launch" - on by default, enabled only while agent restore is on); Notifications ("Desktop notifications"); Agent Panel ("Shift+Enter to send" - when off, Enter sends and Shift+Enter adds a newline) |
-| Coding | Source Folder (current folder, folder picker, clear with confirmation); Agent Options (agent-type picker, per-type options field) |
+| Coding | Source Folder (current folder, folder picker, clear with confirmation); a tab per agent type, each with one group holding that agent's options field and, for Claude and Codex, its adapter's command, version and Update action |
 | Autopilot | Enable autopilot, AI Provider picker, API key, Action picker, and custom prompt configuration (see [Autopilot]({{ '/latest/autopilot/' | relative_url }})) |
 | Voice | "Enable voice input"; engine picker (Apple SpeechAnalyzer only, disabled); read-only push-to-talk key, not changeable here; "Auto-insert transcription"; controls disabled while voice input is off |
 | MCP | "Enable MCP server"; port field (default 8766); read-only `/mcp` URL, updated with the port; installation-command generator with copy (offers Claude, Codex, OpenCode, Gemini and Copilot, not Shell) |
@@ -77,6 +77,17 @@ and behave identically. The resolved appearance is applied at startup before
 the first window is shown. An OS appearance change re-resolves through the
 stored mode, so a flip repaints only under System or Auto, and changing the
 mode repaints every open window without a relaunch.
+
+## Adapter updates
+
+Knot checks the ACP adapters it installs (Claude's and Codex's) for updates
+about a minute after launch and then once a day. When a check finds a new
+version, Knot raises one desktop notification for it (if desktop
+notifications are on) and puts a dot on the Coding tab and on that agent's
+tab; the agent's group shows the installed and available versions with an
+Update button. The refresh button beside the version checks again
+immediately. Found updates, installs and failed checks are written to the
+application log in `~/Library/Logs/Knot`.
 
 ## Desktop notifications
 
