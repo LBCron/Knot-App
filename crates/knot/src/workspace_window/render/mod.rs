@@ -161,7 +161,7 @@ impl WorkspaceWindow {
             let folder = self.store
                              .lock()
                              .agent(id)
-                             .map(|agent| agent.folder.clone());
+                             .map(|agent| agent.effective_folder().to_owned());
             if let Some(folder) = folder {
                 self.refresh_diff_stats(id, &folder);
             }

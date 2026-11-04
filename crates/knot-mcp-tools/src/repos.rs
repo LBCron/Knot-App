@@ -96,7 +96,8 @@ pub fn create_worktree_path(repo_path: &str, branch_name: &str, requested: Optio
 /// `requested` as a destination: a leading `~/` is `home`, and anything still
 /// relative is refused rather than resolved against Knot's own working
 /// directory, which is not the agent's.
-fn requested_destination(requested: &str, home: Option<&Path>) -> crate::Result<PathBuf> {
+pub(crate) fn requested_destination(requested: &str, home: Option<&Path>)
+                                    -> crate::Result<PathBuf> {
     let path = match (requested.strip_prefix("~/"), home) {
         (Some(rest), Some(home)) => home.join(rest),
         _ => PathBuf::from(requested),
