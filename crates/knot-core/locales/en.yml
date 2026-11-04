@@ -117,6 +117,9 @@ panel:
   copy_code: "Copy code"
   copied_code: "Copied code to clipboard"
   queued: "Queued"
+  # The working turn's time and its estimated tokens (#35), Claude Code's
+  # "(42s · 1.2k tokens)". The "~" marks the count as an estimate.
+  turn_progress: "%{elapsed} · ~%{tokens} tokens"
   queued_inbox_nudge: "Queued inbox check"
   queued_autopilot: "Queued Autopilot reply"
   queued_startup_prompt: "Queued startup prompt"

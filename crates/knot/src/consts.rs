@@ -470,3 +470,7 @@ pub(crate) const ADAPTER_UPDATE_CHECK_INTERVAL: Duration = Duration::from_secs(2
 /// An adapter update notification's tag, before the agent type. Not an
 /// agent id, so a click only brings Knot forward.
 pub(crate) const ADAPTER_UPDATE_NOTIFICATION_TAG_PREFIX: &str = "adapter-update:";
+
+/// Characters to a token, for the working turn's estimate (#35): the usual
+/// rule of thumb for English text and code.
+pub(crate) const CHARS_PER_TOKEN: usize = 4;
