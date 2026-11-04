@@ -15,19 +15,25 @@ pub(crate) enum Shortcut {
     JumpToBottom,
     ToggleArtifacts,
     InsertPrompt,
+    OpenPersonas,
+    OpenPrompts,
+    OpenBench,
 }
 
 impl Shortcut {
     /// In the order the Keyboard settings pane lists them.
-    pub(crate) const ALL: [Shortcut; 9] = [Shortcut::SelectWorkspace,
-                                           Shortcut::SelectAgent,
-                                           Shortcut::FocusAgentInput,
-                                           Shortcut::ToggleDashboard,
-                                           Shortcut::TogglePullRequests,
-                                           Shortcut::JumpToBottom,
-                                           Shortcut::ToggleArtifacts,
-                                           Shortcut::InsertPrompt,
-                                           Shortcut::OpenCommandCenter];
+    pub(crate) const ALL: [Shortcut; 12] = [Shortcut::SelectWorkspace,
+                                            Shortcut::SelectAgent,
+                                            Shortcut::FocusAgentInput,
+                                            Shortcut::ToggleDashboard,
+                                            Shortcut::TogglePullRequests,
+                                            Shortcut::JumpToBottom,
+                                            Shortcut::ToggleArtifacts,
+                                            Shortcut::InsertPrompt,
+                                            Shortcut::OpenCommandCenter,
+                                            Shortcut::OpenPersonas,
+                                            Shortcut::OpenPrompts,
+                                            Shortcut::OpenBench];
 
     pub(crate) fn label_key(self) -> &'static str {
         match self {
@@ -40,6 +46,9 @@ impl Shortcut {
             Shortcut::JumpToBottom => "keymap.shortcut.jump_to_bottom",
             Shortcut::ToggleArtifacts => "keymap.shortcut.toggle_artifacts",
             Shortcut::InsertPrompt => "keymap.shortcut.insert_prompt",
+            Shortcut::OpenPersonas => "keymap.shortcut.open_personas",
+            Shortcut::OpenPrompts => "keymap.shortcut.open_prompts",
+            Shortcut::OpenBench => "keymap.shortcut.open_bench",
         }
     }
 
@@ -81,6 +90,12 @@ impl Shortcut {
             // I for Insert. Unbound anywhere else in the app, and the
             // composer, which has focus when this applies, binds no ⌥⌘ chord.
             Shortcut::InsertPrompt => "cmd-alt-i",
+            // The library windows (#223). ⌥⌘P is Pull Requests, so Personas
+            // takes ⇧ on it; Prompts is Insert Prompt's chord with ⇧, the
+            // library that shortcut inserts from; B for Bench is free.
+            Shortcut::OpenPersonas => "cmd-alt-shift-p",
+            Shortcut::OpenPrompts => "cmd-alt-shift-i",
+            Shortcut::OpenBench => "cmd-alt-b",
             Shortcut::SelectWorkspace | Shortcut::SelectAgent => return None,
         };
         Chord::parse(source)
