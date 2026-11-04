@@ -120,6 +120,10 @@ panel:
   queued_inbox_nudge: "Queued inbox check"
   queued_autopilot: "Queued Autopilot reply"
   queued_startup_prompt: "Queued startup prompt"
+  # A queued prompt the session's usage limit is holding (#368): it goes on
+  # its own when the limit lifts, or now if the user says so.
+  queued_session_limit: "Waiting for the session limit to reset"
+  send_queued_now: "Send now"
   failed: "Failed"
   retry: "Retry"
   retry_queued: "Retry this message"
