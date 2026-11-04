@@ -29,8 +29,11 @@ use crate::workspace_window::prompt_queue::queued_status_label;
 
 impl WorkspaceWindow {
     /// The queued-prompt rows for `id`, or nothing when the queue is empty.
+    ///
+    /// `held` is whether the session's usage limit is holding the queue
+    /// (#368): each waiting row then says so and offers to send now.
     pub(super) fn render_panel_queued_prompts(id: Uuid, queued_prompts: &[QueuedPanelPrompt],
-                                              cx: &mut Context<Self>)
+                                              held: bool, cx: &mut Context<Self>)
                                               -> Option<impl IntoElement + use<>> {
         (!queued_prompts.is_empty()).then(|| {
                                         v_flex().gap_1().children(queued_prompts.iter().map(
@@ -72,9 +75,8 @@ impl WorkspaceWindow {
                                     } else {
                                         gpui_kit::assets::IconName::Clock4
                                     }))
-                                    .tooltip(queued_status_label(prompt.failed, prompt.origin))
-                                    .accessibility_label(queued_status_label(prompt.failed,
-                                                                             prompt.origin))
+                                    .tooltip(status_label(prompt, held))
+                                    .accessibility_label(status_label(prompt, held))
                                     .text_color(if prompt.failed {
                                         cx.theme().danger
                                     } else {
@@ -102,6 +104,23 @@ impl WorkspaceWindow {
                                         if let Some(queue) = view.panel_prompt_queues.get_mut(&id)
                                             && prompt_queue::retry(queue, prompt_id)
                                         {
+                                            cx.notify();
+                                        }
+                                    }))
+                            }))
+                            // Held by the usage limit: the user's way past it
+                            // (#368). Not on a failed row, whose way out is
+                            // retry, nor on one already marked to go.
+                            .children((held && !prompt.failed && !prompt.send_now).then(|| {
+                                Button::new(("panel-queued-prompt-send-now", element_key(prompt_id)))
+                                    .icon(IconName::Send)
+                                    .tooltip(knot_core::l10n::t("panel.send_queued_now"))
+                                    .accessibility_label(knot_core::l10n::t("panel.send_queued_now"))
+                                    .text_color(cx.theme().muted_foreground)
+                                    .ghost()
+                                    .small()
+                                    .on_click(cx.listener(move |view, _: &ClickEvent, _, cx| {
+                                        if view.send_queued_prompt_now(id, prompt_id) {
                                             cx.notify();
                                         }
                                     }))
@@ -148,4 +167,14 @@ impl WorkspaceWindow {
             ))
                                     })
     }
+}
+
+/// The status icon's label: why the entry is still waiting. A healthy entry
+/// the usage limit is holding says that, rather than plain "Queued" - the
+/// limit is the reason, and the reason it will go on its own (#368).
+fn status_label(prompt: &QueuedPanelPrompt, held: bool) -> String {
+    if held && !prompt.failed && !prompt.send_now {
+        return knot_core::l10n::t("panel.queued_session_limit").to_string();
+    }
+    queued_status_label(prompt.failed, prompt.origin)
 }
