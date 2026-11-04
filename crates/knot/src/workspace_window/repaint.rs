@@ -78,6 +78,9 @@ impl WorkspaceWindow {
         // Every agent's taps, not just the selected one's: an agent working
         // in an unselected pane is the case this feature exists for.
         let pull_requests_recorded = self.drain_pull_requests(cx);
+        // A terminal agent's usage-limit notice, read on its PTY thread
+        // (#36). A local: the take clears as it reads.
+        let session_limits_landed = self.drain_session_limits();
         let prompts_completed = self.drain_prompt_results();
         let panel_states_moved = self.sync_panel_agent_states(cx);
         // The other half of that sync. `sync_panel_agent_states` says a
@@ -172,6 +175,7 @@ impl WorkspaceWindow {
         // notify from - see `workspace_window::mcp_panel::probe`.
         let mcp_probed = self.mcp_probe_tick(cx);
         if panel_states_moved
+           || session_limits_landed
            || panel_status_landed
            || panel_dirty
            || spinner_dirty

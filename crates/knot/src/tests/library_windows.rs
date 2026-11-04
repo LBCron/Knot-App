@@ -19,6 +19,10 @@ fn store() -> Arc<Mutex<knot_agents::AgentStore>> {
     Arc::new(Mutex::new(knot_agents::AgentStore::new()))
 }
 
+fn messages() -> Arc<Mutex<knot_messaging::MessageStore>> {
+    Arc::new(Mutex::new(knot_messaging::MessageStore::new()))
+}
+
 /// Installs the settings surface every pane reads from, rooted at a
 /// temporary directory so a test opening a window never touches the
 /// developer's own preferences.
@@ -47,37 +51,98 @@ fn persona_preview_truncates_long_instructions_with_ellipsis() {
     assert_eq!(&preview[..80], "a".repeat(80).as_str());
 }
 
-/// A persona assigned to an agent can't be deleted - the count drives both
-/// the disabled delete button and its tooltip.
+/// A persona assigned to agents can't be deleted, and the agents using it
+/// are named (#365) - they drive both the disabled delete button and the
+/// "Used by" links.
 #[test]
-fn personas_in_use_counts_only_the_agents_that_reference_each_persona() {
+fn persona_users_names_only_the_agents_that_reference_each_persona() {
     let assigned = Uuid::new_v4();
     let unused = Uuid::new_v4();
     let mut agents = knot_agents::AgentStore::new();
     let ws = workspace("One");
     agents.add_workspace(ws.clone());
     agents.set_current_workspace(ws.id);
-    agents.create("~/alpha",
-                  knot_agents::CreateOptions { persona_id: Some(assigned),
-                                               ..Default::default() });
-    agents.create("~/beta",
-                  knot_agents::CreateOptions { persona_id: Some(assigned),
-                                               ..Default::default() });
+    let alpha = agents.create("~/alpha",
+                              knot_agents::CreateOptions { persona_id: Some(assigned),
+                                                           ..Default::default() });
+    let beta = agents.create("~/beta",
+                             knot_agents::CreateOptions { persona_id: Some(assigned),
+                                                          ..Default::default() });
     agents.create("~/gamma", knot_agents::CreateOptions::default());
 
-    let in_use = LibraryWindow::personas_in_use(agents.agents());
+    let users = LibraryWindow::persona_users(agents.agents());
 
-    assert_eq!(in_use.get(&assigned).copied(), Some(2));
-    assert_eq!(in_use.get(&unused).copied(), None);
+    let ids: Vec<Uuid> = users[&assigned].iter().map(|user| user.id).collect();
+    assert_eq!(ids, [alpha, beta], "in roster order");
+    assert_eq!(users[&assigned][0].name, agents.agent(alpha).unwrap().name);
+    assert!(!users.contains_key(&unused));
 }
 
+/// The delete tooltip says why it is disabled by naming the agents, and is
+/// the delete label otherwise.
 #[test]
-fn persona_delete_tooltip_names_the_reason_it_is_disabled() {
-    assert_eq!(LibraryWindow::persona_delete_tooltip(0), "Delete persona");
-    assert_eq!(LibraryWindow::persona_delete_tooltip(1),
-               "In use by 1 agent");
-    assert_eq!(LibraryWindow::persona_delete_tooltip(3),
-               "In use by 3 agents");
+fn persona_delete_tooltip_names_the_agents_using_it() {
+    use crate::library_window::PersonaUser;
+
+    for key in ["settings.personas.delete",
+                "settings.personas.in_use_by",
+                "settings.personas.used_by",
+                "settings.personas.show_agent"]
+    {
+        assert_ne!(knot_core::l10n::t(key), key, "{key} must resolve");
+    }
+    assert_eq!(LibraryWindow::persona_delete_tooltip(&[]),
+               knot_core::l10n::t("settings.personas.delete"));
+    let users = [PersonaUser { id:   Uuid::new_v4(),
+                               name: "Alpha".into(), },
+                 PersonaUser { id:   Uuid::new_v4(),
+                               name: "Beta".into(), }];
+    let tooltip = LibraryWindow::persona_delete_tooltip(&users);
+    assert!(tooltip.contains("Alpha") && tooltip.contains("Beta"),
+            "{tooltip}");
+}
+
+/// A "Used by" link takes the user to the agent: its workspace window opens
+/// with it selected (#365).
+#[gpui_kit::test]
+fn a_used_by_link_opens_the_agent(cx: &mut TestAppContext) {
+    let mut agents = knot_agents::AgentStore::new();
+    let ws = workspace("One");
+    let workspace_id = ws.id;
+    agents.add_workspace(ws);
+    let store = Arc::new(Mutex::new(agents));
+    let window = cx.update(|cx| {
+                       gpui_kit::init(cx);
+                       WindowRegistry::install(cx);
+                       install_settings(cx);
+                       crate::settings_global::write(cx, |settings| {
+                           settings.restore_default_personas()
+                                   .expect("the built-in personas restore");
+                       });
+                       let persona = crate::settings_global::read(cx).active_personas()[0].id;
+                       store.lock().create("~/alpha",
+                                knot_agents::CreateOptions { persona_id: Some(persona),
+                                                             workspace_id: Some(workspace_id),
+                                                             agent_type:
+                                                                 Some("library-test-inert".into()),
+                                                             ..Default::default() });
+                       open_library_window(Library::Personas, Arc::clone(&store), messages(), cx);
+                       *cx.windows().first().expect("the Personas window")
+                   });
+    let agent = store.lock().agents()[0].id;
+    let mut window = gpui_kit::VisualTestContext::from_window(window, cx);
+    window.run_until_parked();
+
+    let link = window.debug_bounds("persona-0-user-0")
+                     .expect("the persona in use names its agent");
+    window.simulate_click(link.center(), gpui_kit::Modifiers::none());
+    window.run_until_parked();
+
+    let selected = cx.update(|cx| {
+                         WindowRegistry::workspace_view(crate::window_registry::WindowKey::Workspace(workspace_id), cx)
+                             .map(|view| view.read(cx).selected_agent_id())
+                     });
+    assert_eq!(selected, Some(Some(agent)));
 }
 
 /// Every library window's title and its Window menu item, so #20's three
@@ -108,11 +173,11 @@ fn a_repeat_request_raises_the_open_library_window_rather_than_opening_another(c
           WindowRegistry::install(cx);
           install_settings(cx);
 
-          open_library_window(Library::Personas, store(), cx);
+          open_library_window(Library::Personas, store(), messages(), cx);
           assert_eq!(cx.windows().len(), 1);
 
           for _ in 0..9 {
-              open_library_window(Library::Personas, store(), cx);
+              open_library_window(Library::Personas, store(), messages(), cx);
           }
           assert_eq!(cx.windows().len(),
                      1,
@@ -130,7 +195,7 @@ fn each_library_gets_its_own_window(cx: &mut TestAppContext) {
           install_settings(cx);
 
           for library in Library::ALL {
-              open_library_window(library, store(), cx);
+              open_library_window(library, store(), messages(), cx);
           }
           assert_eq!(cx.windows().len(), Library::ALL.len());
       });
@@ -146,7 +211,7 @@ fn import_from_library_opens_the_import_window(cx: &mut TestAppContext) {
                        WindowRegistry::install(cx);
                        install_settings(cx);
                        crate::import_window::register_import_action(store(), cx);
-                       open_library_window(Library::Personas, store(), cx);
+                       open_library_window(Library::Personas, store(), messages(), cx);
                        cx.windows()
                          .last()
                          .copied()
@@ -174,7 +239,7 @@ fn every_library_window_renders(cx: &mut TestAppContext) {
                         WindowRegistry::install(cx);
                         install_settings(cx);
                         Library::ALL.map(|library| {
-                                        open_library_window(library, store(), cx);
+                                        open_library_window(library, store(), messages(), cx);
                                         cx.windows()
                                 .last()
                                 .copied()
@@ -199,7 +264,7 @@ fn the_personas_toolbar_buttons_sit_together(cx: &mut TestAppContext) {
                        gpui_kit::init(cx);
                        WindowRegistry::install(cx);
                        install_settings(cx);
-                       open_library_window(Library::Personas, store(), cx);
+                       open_library_window(Library::Personas, store(), messages(), cx);
                        cx.windows()
                          .last()
                          .copied()

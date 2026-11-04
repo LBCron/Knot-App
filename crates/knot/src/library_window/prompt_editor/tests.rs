@@ -109,6 +109,7 @@ fn saving_redraws_the_open_prompts_window(cx: &mut TestAppContext) {
           let store = std::sync::Arc::new(parking_lot::Mutex::new(knot_agents::AgentStore::new()));
           crate::library_window::open_library_window(crate::library_window::Library::Prompts,
                                                      store,
+                                                     std::sync::Arc::default(),
                                                      cx);
           open_prompt_editor(None, cx);
       });

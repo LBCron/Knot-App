@@ -477,3 +477,16 @@ pub(crate) const CODEX_USAGE_MAX_AGE: Duration = Duration::from_secs(60);
 
 /// Where Codex's usage can be extended, as its own limit message names it.
 pub(crate) const CODEX_USAGE_URL: &str = "https://chatgpt.com/codex/settings/usage";
+
+/// How long after launch the first background adapter update check runs
+/// (#367): late enough to stay out of startup's way.
+pub(crate) const ADAPTER_UPDATE_FIRST_CHECK_DELAY: Duration = Duration::from_secs(60);
+/// How often adapters are checked for updates after that.
+pub(crate) const ADAPTER_UPDATE_CHECK_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+/// An adapter update notification's tag, before the agent type. Not an
+/// agent id, so a click only brings Knot forward.
+pub(crate) const ADAPTER_UPDATE_NOTIFICATION_TAG_PREFIX: &str = "adapter-update:";
+
+/// Characters to a token, for the working turn's estimate (#35): the usual
+/// rule of thumb for English text and code.
+pub(crate) const CHARS_PER_TOKEN: usize = 4;

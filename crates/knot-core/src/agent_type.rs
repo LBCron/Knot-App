@@ -270,8 +270,11 @@ pub const ALL: &[AgentTypeInfo] =
                       hook_activity:       false,
                       subagents:           SubagentReporting::None, }];
 
+/// Claude Code's type id.
+pub const CLAUDE: &str = "claude";
+
 /// The type a new agent gets when nothing else says otherwise.
-pub const DEFAULT: &str = "claude";
+pub const DEFAULT: &str = CLAUDE;
 
 /// The bare-shell type, for the paths that create one deliberately -
 /// a shell companion, or the editor stating what a companion must be.

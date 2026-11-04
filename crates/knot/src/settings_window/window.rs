@@ -122,6 +122,12 @@ pub(crate) fn open_settings_window(handle: &Rc<RefCell<Option<AnyWindowHandle>>>
                                                   _mcp_port_subscription: mcp_port_subscription,
                                                   keyboard: Default::default(),
                                                   adapter_update: Default::default(),
+                                                  // A background check landing
+                                                  // repaints the Coding tab (#367).
+                                                  _adapter_updates_observation: {
+                                                      crate::adapter_updates::init(cx);
+                                                      cx.observe_global::<crate::adapter_updates::AdapterUpdates>(|_, cx| cx.notify())
+                                                  },
                                                   runtime:
                                                       crate::window_runtime::WindowRuntime::new()
                                                           .expect("failed to start settings window runtime") }
@@ -244,8 +250,11 @@ pub(crate) struct SettingsWindow {
     /// The Coding tab's last adapter version check per agent type, keyed by
     /// `agent_type` so switching the picker doesn't lose another type's
     /// in-flight or completed check.
+    /// Repaints the window when an adapter check lands, from the
+    /// background or another window (#367).
+    pub(super) _adapter_updates_observation:          gpui_kit::Subscription,
     pub(super) adapter_update:
-        std::collections::BTreeMap<String, super::panes::coding::AdapterUpdateState>,
+        std::collections::BTreeMap<String, super::panes::coding_adapter::AdapterUpdateState>,
     /// Runs the Coding tab's adapter check and install. Both spawn `npm`
     /// through `tokio::process`, which needs a tokio reactor - GPUI's
     /// executor has none, and polling them there panics (issue #252).

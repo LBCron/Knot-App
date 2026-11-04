@@ -385,6 +385,10 @@ pub(crate) struct WorkspaceWindow {
     /// One working-tree watch per open panel. `Arc` because the watch's
     /// callback outlives the frame that started it.
     pub(super) git_watches:                      BTreeMap<Uuid, Arc<knot_watch::Watch>>,
+    /// The folder each agent's git status, diffs and diff stat were read
+    /// from, so a change of folder drops what was read from the old one and
+    /// moves the panel's watch (#25).
+    pub(super) git_read_folders:                 crate::read_folders::ReadFolders,
     /// Set by a watch callback, which runs on a tokio task with no GPUI
     /// context and so cannot touch the caches or notify. The repaint poll
     /// reads it, forgets the agent's status and redraws - the same

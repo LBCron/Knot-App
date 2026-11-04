@@ -35,3 +35,23 @@ pub(crate) const AGENT_TERM: &str = "xterm-256color";
 /// The `COLORTERM` every agent terminal declares: gpui-terminal draws 24-bit
 /// colour (`Color::Spec`), and tools only use it when this says so.
 pub(crate) const AGENT_COLORTERM: &str = "truecolor";
+
+/// The notices, lower-case, that open a line of Claude Code's output when
+/// its session hits a usage limit (#36): the hard stop, and the wrap-up
+/// allowance it may grant first ("Usage limit reached · wrapping up").
+/// Matched at the start of a line and followed by nothing or by
+/// [`SESSION_LIMIT_SEPARATORS`], so an agent writing about limits does not
+/// stop itself.
+pub(crate) const SESSION_LIMIT_NOTICES: &[&str] = &["usage limit reached",
+                                                    "you've hit your session limit",
+                                                    "you've hit your usage limit"];
+
+/// Longest line the session-limit scan reads, in bytes. The notices are a
+/// short status line; a longer line is prose and is skipped unread, which
+/// also bounds what the scan buffers between chunks.
+pub(crate) const SESSION_LIMIT_MAX_LINE: usize = 256;
+
+/// What may follow a notice's phrase on its line: Claude Code's "·" before
+/// the reset time or "wrapping up", or a sentence's end.
+pub(crate) const SESSION_LIMIT_SEPARATORS: &[char] =
+    &['\u{b7}', '.', ',', '\u{2014}', '-', '(', '!'];

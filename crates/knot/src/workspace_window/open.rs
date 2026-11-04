@@ -134,6 +134,7 @@ impl WorkspaceWindow {
                     git_diffs: crate::git_panel::state::GitDiffCache::default(),
                     git_selection: BTreeMap::new(),
                     git_watches: BTreeMap::new(),
+                    git_read_folders: crate::read_folders::ReadFolders::default(),
                     git_watch_dirty: BTreeMap::new(),
                     git_panel_width: BTreeMap::new(),
                     git_action_error: BTreeMap::new(),

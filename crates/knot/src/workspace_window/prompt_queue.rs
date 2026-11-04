@@ -66,12 +66,16 @@ impl PromptOrigin {
 /// it, rather than being retried automatically.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct QueuedPanelPrompt {
-    pub(crate) id:     Uuid,
-    pub(crate) text:   String,
-    pub(crate) failed: bool,
+    pub(crate) id:       Uuid,
+    pub(crate) text:     String,
+    pub(crate) failed:   bool,
     /// What put this prompt here. Set at the one point where that is still
     /// known; nothing downstream can recover it.
-    pub(crate) origin: PromptOrigin,
+    pub(crate) origin:   PromptOrigin,
+    /// The user chose to send this now, though the session's usage limit
+    /// still stands (#368). The pump hands it over without waiting for the
+    /// limit to lift.
+    pub(crate) send_now: bool,
 }
 
 impl QueuedPanelPrompt {
@@ -79,7 +83,8 @@ impl QueuedPanelPrompt {
         Self { id: Uuid::new_v4(),
                text,
                failed: false,
-               origin }
+               origin,
+               send_now: false }
     }
 }
 
@@ -127,12 +132,36 @@ pub(crate) fn retry(queue: &mut [QueuedPanelPrompt], id: Uuid) -> bool {
 ///
 /// A failed head is not taken: it waits for the user to retry or delete it,
 /// and everything behind it waits too, so prompts are never delivered out
-/// of the order they were queued in.
-pub(crate) fn take_next(queue: &mut Vec<QueuedPanelPrompt>) -> Option<QueuedPanelPrompt> {
-    if queue.first()?.failed {
+/// of the order they were queued in. Nor is a head while the session is
+/// `held` by its usage limit, unless the user chose to send it now (#368).
+pub(crate) fn take_next(queue: &mut Vec<QueuedPanelPrompt>, held: bool)
+                        -> Option<QueuedPanelPrompt> {
+    let head = queue.first()?;
+    if head.failed || (held && !head.send_now) {
         return None;
     }
     Some(queue.remove(0))
+}
+
+/// The user's override for a session held by its usage limit (#368): `id`
+/// goes to the head of the queue, marked to be sent now. Returns whether
+/// the entry was found.
+///
+/// To the head, because "now" means next - it would otherwise still wait
+/// behind entries the limit is holding. A failed entry is left alone: retry
+/// is its way out.
+pub(crate) fn send_now(queue: &mut Vec<QueuedPanelPrompt>, id: Uuid) -> bool {
+    let Some(index) = position(queue, id)
+    else {
+        return false;
+    };
+    if queue[index].failed {
+        return false;
+    }
+    let mut prompt = queue.remove(index);
+    prompt.send_now = true;
+    queue.insert(0, prompt);
+    true
 }
 
 /// Puts a prompt whose delivery failed back at the head of the queue,
@@ -246,7 +275,8 @@ mod tests {
         let mut queue = queue(&["first"]);
         queue.push(QueuedPanelPrompt::new("nudge".to_string(), PromptOrigin::InboxNudge));
 
-        assert_eq!(take_next(&mut queue).map(|prompt| prompt.text).as_deref(),
+        assert_eq!(take_next(&mut queue, false).map(|prompt| prompt.text)
+                                               .as_deref(),
                    Some("first"));
 
         assert_eq!(texts(&queue), ["nudge"]);
@@ -421,7 +451,7 @@ mod tests {
         let mut queue = queue(&["first", "second"]);
         let first = queue[0].id;
 
-        let taken = take_next(&mut queue).expect("the head is waiting");
+        let taken = take_next(&mut queue, false).expect("the head is waiting");
 
         assert_eq!(taken.id, first);
         assert_eq!(texts(&queue), ["second"]);
@@ -432,14 +462,14 @@ mod tests {
         let mut queue = queue(&["failed", "second"]);
         queue[0].failed = true;
 
-        assert_eq!(take_next(&mut queue), None);
+        assert_eq!(take_next(&mut queue, false), None);
 
         assert_eq!(texts(&queue), ["failed", "second"]);
     }
 
     #[test]
     fn taking_from_an_empty_queue_takes_nothing() {
-        assert_eq!(take_next(&mut Vec::new()), None);
+        assert_eq!(take_next(&mut Vec::new(), false), None);
     }
 
     /// A failed delivery comes back as the same prompt, in front of what
@@ -447,7 +477,7 @@ mod tests {
     #[test]
     fn a_failed_delivery_returns_to_the_head_marked() {
         let mut queue = queue(&["first", "second"]);
-        let taken = take_next(&mut queue).expect("the head is waiting");
+        let taken = take_next(&mut queue, false).expect("the head is waiting");
         let first = taken.id;
         queue.push(QueuedPanelPrompt::new("third".to_string(), PromptOrigin::User));
 
@@ -456,8 +486,44 @@ mod tests {
         assert_eq!(texts(&queue), ["first", "second", "third"]);
         assert_eq!(queue[0].id, first);
         assert!(queue[0].failed);
-        assert_eq!(take_next(&mut queue),
+        assert_eq!(take_next(&mut queue, false),
                    None,
                    "the failed head blocks the queue");
+    }
+
+    /// #368: while the session's usage limit holds it, the head waits.
+    #[test]
+    fn a_held_session_takes_nothing() {
+        let mut queue = vec![QueuedPanelPrompt::new("a".into(), PromptOrigin::User)];
+
+        assert_eq!(take_next(&mut queue, true), None);
+        assert_eq!(queue.len(), 1, "the prompt is still queued");
+        assert!(take_next(&mut queue, false).is_some(),
+                "and goes once the limit lifts");
+    }
+
+    /// #368: "send now" takes the entry ahead of the rest, past the limit.
+    #[test]
+    fn send_now_moves_the_entry_to_the_head_past_the_limit() {
+        let first = QueuedPanelPrompt::new("first".into(), PromptOrigin::User);
+        let second = QueuedPanelPrompt::new("second".into(), PromptOrigin::User);
+        let mut queue = vec![first.clone(), second.clone()];
+
+        assert!(send_now(&mut queue, second.id));
+        let taken = take_next(&mut queue, true).expect("sent now, though held");
+
+        assert_eq!(taken.id, second.id);
+        assert_eq!(take_next(&mut queue, true), None, "the rest still wait");
+    }
+
+    #[test]
+    fn send_now_leaves_a_failed_or_missing_entry_alone() {
+        let mut failed = QueuedPanelPrompt::new("x".into(), PromptOrigin::User);
+        failed.failed = true;
+        let mut queue = vec![failed.clone()];
+
+        assert!(!send_now(&mut queue, failed.id),
+                "retry is a failed entry's way out");
+        assert!(!send_now(&mut queue, Uuid::new_v4()));
     }
 }

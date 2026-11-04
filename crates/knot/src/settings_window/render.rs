@@ -39,13 +39,26 @@ impl SettingsWindow {
 
     fn render_tab_strip(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let settings_window = cx.entity();
+        let update_waiting =
+            cx.try_global::<crate::adapter_updates::AdapterUpdates>()
+              .is_some_and(crate::adapter_updates::AdapterUpdates::any_update_available);
         let selected_index = SettingsTab::ALL.iter()
                                              .position(|tab| *tab == self.selected_tab)
                                              .unwrap_or(0);
         TabBar::new("settings-tabs").underline()
                                     .selected_index(selected_index)
                                     .children(SettingsTab::ALL.map(|tab| {
-                                                                  Tab::new().label(tab.label())
+                                                                  let label = Tab::new().label(tab.label());
+                                                                  // An adapter update waiting
+                                                                  // (#367) marks the tab it is on.
+                                                                  if tab == SettingsTab::Coding
+                                                                     && update_waiting
+                                                                  {
+                                                                      label.suffix(super::panes::coding_adapter::update_dot(cx))
+                                                                  }
+                                                                  else {
+                                                                      label
+                                                                  }
                                                               }))
                                     .on_click(move |index, window, app| {
                                         let tab = SettingsTab::ALL[*index];

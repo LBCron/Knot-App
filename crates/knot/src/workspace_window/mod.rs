@@ -22,6 +22,8 @@ mod codex_usage_refresh;
 mod creation;
 #[cfg(test)]
 mod creation_tests;
+#[cfg(test)]
+mod git_folder_tests;
 mod git_panel;
 #[cfg(test)]
 mod inbox_nudge_tests;
@@ -50,6 +52,7 @@ mod repaint;
 mod restart_tests;
 #[cfg(test)]
 mod send_prompt_tests;
+mod session_limits;
 mod sessions;
 mod shortcuts;
 #[cfg(test)]

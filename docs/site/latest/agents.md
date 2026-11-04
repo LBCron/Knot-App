@@ -149,7 +149,11 @@ wait Autopilot started says what it read in the agent's last reply (`Autopilot: 
 you a question`). The reason goes as soon as the agent leaves Awaiting input. A session that exits non-zero, or
 a panel connection that ends with an error, moves the agent to Error. A panel agent whose turn is
 refused with a session or usage limit ("You've hit your session limit · resets 5:20pm") shows Session
-limit instead, in red, until you send it another prompt. The dashboard's cards add a
+limit instead, in red, until you send it another prompt. A Claude agent in the terminal does the
+same when it prints a usage-limit notice - including "Usage limit reached · wrapping up", when Claude
+lets it finish what it was doing first: it stays Session limit through the wrap-up and after it, until
+you submit another prompt, and Autopilot leaves it alone. A permission the wrap-up asks for still shows
+as Awaiting input, and the agent goes back to Session limit once you answer it. The dashboard's cards add a
 glanceable working/thinking indicator that reflects the same status and animates on each change; the
 sidebar row does not draw it.
 
@@ -160,11 +164,20 @@ stream, each tool call as its own card - with an icon for the tool and, for a fi
 added/removed line diff - and the shell commands you run from the prompt. A completed tool call
 collapses to its header, while failed and running calls stay open and any call can be opened or
 closed by hand. An active turn shows a turn-in-progress indicator as the conversation's last row,
-below any permission prompt.
+below any permission prompt. Beside it, the turn's running time and roughly how much it has written, as
+Claude Code shows them: `42s · ~1.2k tokens`. The time is exact; the token count is an estimate
+from the text the agent has streamed (about four characters to a token), so a turn that spends a
+long time thinking reads low.
 
 A permission request appears inline with its options as buttons, names the tool it is for, and
 blocks further prompts until you answer. A message sent while a response is in progress is queued
-and delivered when the turn ends; a stop control interrupts the active turn. You can switch one
+and delivered when the turn ends; a stop control interrupts the active turn.
+
+A message sent to an agent stopped by its session limit is queued too, and goes on its own when the
+limit resets - "resets 5:20pm (America/Los_Angeles)" is read as the next 5:20 pm in that zone. Its
+row says it is waiting for the session limit and offers **Send now**, which sends it next without
+waiting. If the provider gives no reset time Knot can read, queued messages wait until you choose
+Send now. You can switch one
 agent between the panel and the raw terminal without interrupting its turn or terminal process, and
 each agent remembers the mode you last chose.
 

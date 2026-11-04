@@ -6,6 +6,7 @@
 //! newer path replaced.
 
 mod about_window;
+mod adapter_updates;
 mod agent_editor;
 mod agent_menu;
 mod agent_menu_entries;
@@ -53,6 +54,7 @@ mod pull_request_filter;
 mod pull_request_groups;
 mod pull_request_state;
 mod quit_guard;
+mod read_folders;
 mod refresh_cache;
 mod settings_global;
 mod settings_window;
