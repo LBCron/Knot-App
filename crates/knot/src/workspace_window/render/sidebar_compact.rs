@@ -44,6 +44,42 @@ pub(crate) struct CompactAgentRow {
     pub hint:          Option<String>,
 }
 
+/// What a compact row's tooltip is built from (#253): with the name and the
+/// status lines hidden, the tooltip is where they go.
+pub(crate) struct CompactTooltip {
+    pub name:          String,
+    pub state:         knot_agents::AgentState,
+    pub idle_since:    Option<std::time::SystemTime>,
+    pub input_reason:  Option<String>,
+    pub session_limit: Option<knot_agents::SessionLimit>,
+    pub is_shell:      bool,
+    /// The status line the full row shows: what the agent says it is doing,
+    /// or its terminal title.
+    pub status:        String,
+}
+
+/// A compact row's tooltip: the agent's name, its state - worded as its
+/// status dot's tooltip words it, so the two cannot disagree - and the
+/// status line, each on its own line. A shell agent has no state, as it has
+/// no dot; an empty status line is left out.
+///
+/// Built when the tooltip opens rather than at render, as the dot's is, so
+/// "idle since 5m ago" read an hour later still says an hour.
+pub(crate) fn compact_tooltip(tooltip: &CompactTooltip) -> String {
+    let mut lines = vec![tooltip.name.clone()];
+    if !tooltip.is_shell {
+        lines.push(crate::app_state::state_tooltip(tooltip.state,
+                                                   tooltip.idle_since,
+                                                   tooltip.input_reason.as_deref(),
+                                                   tooltip.session_limit.as_ref()));
+    }
+    let status = tooltip.status.trim();
+    if !status.is_empty() {
+        lines.push(status.to_owned());
+    }
+    lines.join("\n")
+}
+
 /// The compact row's body: the avatar alone, centred, with the state dot
 /// overlaid on its bottom-trailing corner.
 ///
@@ -89,3 +125,6 @@ pub(crate) fn compact_agent_row_body(row: CompactAgentRow, cx: &gpui_kit::App) -
     let framed = with_key_hint(div().relative().child(tile), hint.as_deref(), true, cx);
     h_flex().w_full().justify_center().child(framed)
 }
+
+#[cfg(test)]
+mod tests;

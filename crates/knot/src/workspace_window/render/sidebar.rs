@@ -30,7 +30,9 @@ use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::px;
 use unicode_segmentation::UnicodeSegmentation;
 
-use super::sidebar_compact::{CompactAgentRow, compact_agent_row_body};
+use super::sidebar_compact::{
+    CompactAgentRow, CompactTooltip, compact_agent_row_body, compact_tooltip,
+};
 use super::status_dot::DotDetail;
 use super::status_dot::status_dot;
 use crate::app_support::single_line;
@@ -102,7 +104,13 @@ impl WorkspaceWindow {
                                        .and_then(|hints| hints.agent(index))
                                        .map(str::to_owned);
                        let menu_name = name.clone();
-                       let tooltip_name = name.clone();
+                       let tooltip = CompactTooltip { name:          name.clone(),
+                                                      state,
+                                                      idle_since,
+                                                      input_reason: input_reason.clone(),
+                                                      session_limit: session_limit.clone(),
+                                                      is_shell,
+                                                      status:        header_title.clone(), };
                        let preview_name = name.clone();
                        let menu_folder = folder.clone();
                        let folder_name =
@@ -199,12 +207,13 @@ impl WorkspaceWindow {
                             // whose pane shows the stopped placeholder is still
                             // visibly the selected one.
                             .when(!is_running, |row| row.opacity(0.45))
-                            // The compact row hides the name, so the name becomes the
-                            // row's tooltip - otherwise an avatar is the only thing
-                            // left to tell two agents apart.
+                            // The compact row hides the name and the status lines,
+                            // so they become the row's tooltip - otherwise an avatar
+                            // is the only thing left to tell two agents apart, and
+                            // what each is doing is out of sight (#253).
                             .when(compact, |row| {
                                 row.tooltip(move |window, cx| {
-                                       Tooltip::new(tooltip_name.clone()).build(window, cx)
+                                       Tooltip::new(compact_tooltip(&tooltip)).build(window, cx)
                                    })
                             })
                             .map(|row| {
