@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use gpui_kit::Context;
 use gpui_kit::InteractiveElement;
@@ -9,13 +10,22 @@ use gpui_kit::base::Disableable;
 use gpui_kit::base::h_flex;
 use gpui_kit::base::v_flex;
 use gpui_kit::component::ActiveTheme;
+use gpui_kit::component::Sizable;
 use gpui_kit::component::WindowExt;
+use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::div;
 use gpui_kit::px;
 use uuid::Uuid;
 
 use super::super::persona_editor::open_persona_editor;
 use crate::library_window::LibraryWindow;
+
+/// An agent a persona is assigned to (#365).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PersonaUser {
+    pub(crate) id:   Uuid,
+    pub(crate) name: String,
+}
 
 impl LibraryWindow {
     /// Truncates `instructions` to `max_chars`, appending an ellipsis when
@@ -30,40 +40,57 @@ impl LibraryWindow {
         }
     }
 
-    /// How many agents each persona is assigned to. A persona still in
-    /// use can't be deleted: the agents referencing it would keep a
+    /// The agents each persona is assigned to, in roster order. A persona
+    /// still in use can't be deleted: the agents referencing it would keep a
     /// `persona_id` pointing at nothing, which reads as "no persona"
-    /// everywhere without ever saying the instructions were dropped.
-    pub(crate) fn personas_in_use(agents: &[knot_agents::Agent]) -> BTreeMap<Uuid, usize> {
-        let mut counts = BTreeMap::new();
-        for persona in agents.iter().filter_map(|agent| agent.persona_id) {
-            *counts.entry(persona).or_insert(0) += 1;
+    /// everywhere without ever saying the instructions were dropped. Naming
+    /// them, rather than counting them, is what lets the user find and
+    /// change them (#365).
+    pub(crate) fn persona_users(agents: &[knot_agents::Agent]) -> BTreeMap<Uuid, Vec<PersonaUser>> {
+        let mut users: BTreeMap<Uuid, Vec<PersonaUser>> = BTreeMap::new();
+        for agent in agents {
+            if let Some(persona) = agent.persona_id {
+                users.entry(persona)
+                     .or_default()
+                     .push(PersonaUser { id:   agent.id,
+                                         name: agent.name.clone(), });
+            }
         }
-        counts
+        users
     }
 
-    /// `personas_in_use` against the live store - the window's own
+    /// `persona_users` against the live store - the window's own
     /// `Settings` snapshot is from the moment it opened and misses agents
     /// created since.
-    fn live_personas_in_use(&self) -> BTreeMap<Uuid, usize> {
-        Self::personas_in_use(self.store.lock().agents())
+    fn live_persona_users(&self) -> BTreeMap<Uuid, Vec<PersonaUser>> {
+        Self::persona_users(self.store.lock().agents())
     }
 
     /// The delete button's tooltip, which doubles as the reason it is
-    /// disabled when the persona is assigned to agents.
-    pub(crate) fn persona_delete_tooltip(in_use: usize) -> String {
-        match in_use {
-            0 => "Delete persona".to_string(),
-            1 => "In use by 1 agent".to_string(),
-            count => format!("In use by {count} agents"),
+    /// disabled when the persona is assigned to agents: it names them.
+    pub(crate) fn persona_delete_tooltip(users: &[PersonaUser]) -> String {
+        if users.is_empty() {
+            return knot_core::l10n::t("settings.personas.delete");
         }
+        let names: Vec<&str> = users.iter().map(|user| user.name.as_str()).collect();
+        knot_core::l10n::t_with("settings.personas.in_use_by",
+                                &[("agents", &names.join(", "))])
+    }
+
+    /// Opens agent `id`'s workspace window with it selected, or raises it -
+    /// a persona's "Used by" link (#365).
+    fn show_agent(&self, id: Uuid, cx: &mut Context<Self>) {
+        crate::workspace_window::WorkspaceWindow::open_agent(Arc::clone(&self.store),
+                                                             Arc::clone(&self.messages),
+                                                             id,
+                                                             cx);
     }
 
     fn delete_persona(&mut self, id: Uuid, cx: &mut Context<Self>) {
         // Checked again here, not just on the button: the dialog that
         // gets us here is opened from a rendered row, and an agent could
         // have taken the persona in between.
-        if self.live_personas_in_use().get(&id).copied().unwrap_or(0) > 0 {
+        if self.live_persona_users().contains_key(&id) {
             cx.notify();
             return;
         }
@@ -84,18 +111,43 @@ impl LibraryWindow {
         cx.notify();
     }
 
-    /// One persona's row: its name and a preview of its instructions, with
-    /// the edit and delete actions.
+    /// One persona's row: its name, a preview of its instructions, the
+    /// agents using it, and the edit and delete actions.
     ///
-    /// `in_use` is how many agents reference it, which is what disables
-    /// delete - the button stays visible and says why in its tooltip
-    /// rather than disappearing.
-    fn persona_row(&self, persona: knot_core::Persona, index: usize, in_use: usize,
+    /// `users` are the agents referencing it, which is what disables delete -
+    /// the button stays visible and names them in its tooltip rather than
+    /// disappearing - and each is a link to that agent.
+    fn persona_row(&self, persona: knot_core::Persona, index: usize, users: Vec<PersonaUser>,
                    cx: &mut Context<Self>)
                    -> impl IntoElement + use<> {
         let library_window = cx.entity();
         let id = persona.id;
         let preview = Self::persona_preview(&persona.instructions, 80);
+        let in_use = !users.is_empty();
+        let tooltip = Self::persona_delete_tooltip(&users);
+        let muted = cx.theme().muted_foreground;
+        let used_by = in_use.then(|| {
+                                h_flex().flex_wrap()
+                                        .items_center()
+                                        .gap_1()
+                                        .text_sm()
+                                        .child(div().text_color(muted)
+                                                    .child(knot_core::l10n::t("settings.personas.used_by")))
+                                        .children(users.into_iter().enumerate().map(|(n, user)| {
+                                            let library_window = library_window.clone();
+                                            Button::new(gpui_kit::ElementId::Name(format!("persona-{index}-user-{n}").into()))
+                                                .label(user.name)
+                                                .link()
+                                                .xsmall()
+                                                .tooltip(knot_core::l10n::t("settings.personas.show_agent"))
+                                                .debug_selector(move || format!("persona-{index}-user-{n}"))
+                                                .on_click(move |_, _, app| {
+                                                    library_window.update(app, |view, cx| {
+                                                        view.show_agent(user.id, cx)
+                                                    });
+                                                })
+                                        }))
+                            });
         h_flex()
                             .justify_between()
                             .items_center()
@@ -110,7 +162,8 @@ impl LibraryWindow {
                                             .text_sm()
                                             .text_color(cx.theme().muted_foreground)
                                             .child(preview),
-                                    ),
+                                    )
+                                    .children(used_by),
                             )
                             .child(
                                 h_flex()
@@ -143,10 +196,10 @@ impl LibraryWindow {
                                         crate::controls::icon_button(
                                             ("persona-delete", index),
                                             "icons/trash.svg",
-                                            Self::persona_delete_tooltip(in_use),
+                                            tooltip,
                                             true,
                                         )
-                                        .disabled(in_use > 0)
+                                        .disabled(in_use)
                                         .on_click({
                                             let library_window = library_window.clone();
                                             let name = persona.name.clone();
@@ -185,7 +238,7 @@ impl LibraryWindow {
                                                                                 .cloned()
                                                                                 .collect();
 
-        let in_use = self.live_personas_in_use();
+        let mut users = self.live_persona_users();
 
         let list = if personas.is_empty() {
             div().text_sm()
@@ -196,12 +249,11 @@ impl LibraryWindow {
         else {
             v_flex().gap_3()
                     .children(personas.into_iter().enumerate().map(|(index, persona)| {
-                                                                  let count =
-                                                                      in_use.get(&persona.id)
-                                                                            .copied()
-                                                                            .unwrap_or(0);
+                                                                  let using =
+                                                                      users.remove(&persona.id)
+                                                                           .unwrap_or_default();
                                                                   self.persona_row(persona, index,
-                                                                                   count, cx)
+                                                                                   using, cx)
                                                               }))
                     .into_any_element()
         };

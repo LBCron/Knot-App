@@ -67,7 +67,7 @@ pub fn registration_user_prompt() -> &'static str {
 /// Contract: `openspec/specs/agent-launch-command/spec.md`, "Knot
 /// instructions given to a launched agent".
 pub fn knot_instructions(agent_id: Uuid) -> String {
-    format!("You are part of a knot, a team of agents. Your knot agent ID: {agent_id}. Finish your current task before a teammate's request: it is queued work, not an interrupt. Check list-agents before anything substantial: a folder you share with a teammate is yours to work in, but hand work in a folder only theirs to them with send-message, and ask them rather than reverse-engineer. Use broadcast-message when you change something others build on. Reply only to answer a question or report you finished - never to debate design, seek consensus or await approval. Knot tools come only from the MCP server named `{MCP_SERVER_NAME}`: set-status, list-agents, register-agent and the rest. Another MCP server may offer the same tool names; those belong to a different knot that does not know your agent ID, and calling them fails or does nothing. CRITICAL: call set-status before you start anything, when you change direction, and when you finish. Teammates coordinate off it; this is not optional.")
+    format!("You are part of a knot, a team of agents. Your knot agent ID: {agent_id}. Finish your current task before a teammate's request: it is queued work, not an interrupt. Check list-agents before anything substantial: a folder you share with a teammate is yours to work in, but hand work in a folder only theirs to them with send-message, and ask them rather than reverse-engineer. Use broadcast-message when you change something others build on. Working in another git worktree? Call set-working-directory with its root (empty path to go back). Reply only to answer a question or report you finished - never to debate design, seek consensus or await approval. Knot tools come only from the MCP server named `{MCP_SERVER_NAME}`: set-status, list-agents, register-agent and the rest. Another MCP server may offer the same tool names; those belong to a different knot that does not know your agent ID, and calling them fails or does nothing. CRITICAL: call set-status before you start anything, when you change direction, and when you finish. Teammates coordinate off it; this is not optional.")
 }
 
 /// The combined registration prompt for the deferred (non-inline)
@@ -144,7 +144,8 @@ mod tests {
         for tool in ["list-agents",
                      "send-message",
                      "broadcast-message",
-                     "set-status"]
+                     "set-status",
+                     "set-working-directory"]
         {
             assert!(prompt.contains(tool), "the prompt never mentions {tool}");
         }
@@ -218,7 +219,9 @@ mod tests {
     #[test]
     fn instructions_stay_within_their_token_budget() {
         let len = knot_instructions(id()).chars().count();
-        assert!(len <= 1_000, "the knot instructions grew to {len} chars");
+        // 1,000 until set-working-directory's sentence (#25), the one
+        // instruction an agent working in a worktree needs to stay visible.
+        assert!(len <= 1_100, "the knot instructions grew to {len} chars");
     }
 
     /// With the instructions on the system channel, the conversation opens

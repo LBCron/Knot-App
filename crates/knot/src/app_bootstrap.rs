@@ -421,21 +421,30 @@ fn register_window_actions(store: Arc<Mutex<knot_agents::AgentStore>>,
     }
     crate::keymap::register_global_handlers(Arc::clone(&store), cx);
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenPersonas, cx| {
-              open_library_window(Library::Personas, Arc::clone(&store), cx);
+              open_library_window(Library::Personas,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenPrompts, cx| {
-              open_library_window(Library::Prompts, Arc::clone(&store), cx);
+              open_library_window(Library::Prompts,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenBench, cx| {
-              open_library_window(Library::Bench, Arc::clone(&store), cx);
+              open_library_window(Library::Bench,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     cx.on_action(move |_: &OpenWorkspaces, cx| {
@@ -591,6 +600,9 @@ pub(crate) fn run() {
                                // manager window: closing that window used
                                // to stop it under every running agent.
                                hold_mcp_server(mcp_stop, cx);
+                               // Adapters are checked for updates unasked,
+                               // shortly after launch and daily (#367).
+                               crate::adapter_updates::install(cx);
                                cx.set_global(MenuBarState::default());
                                // Every window that can be reopened is
                                // registered here, so a second request for
