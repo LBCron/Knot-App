@@ -123,13 +123,14 @@ impl WorkspaceWindow {
         }
     }
 
-    /// One agent's folder, copied out so the store lock is not held across
-    /// the element tree that follows.
+    /// The folder one agent's git is read from - its working directory when
+    /// it has reported one (#25), its folder otherwise - copied out so the
+    /// store lock is not held across the element tree that follows.
     pub(in crate::workspace_window) fn agent_folder(&self, id: Uuid) -> Option<String> {
         self.store
             .lock()
             .agent(id)
-            .map(|agent| agent.folder.clone())
+            .map(|agent| agent.effective_folder().to_owned())
     }
 
     pub(in crate::workspace_window) fn git_panel_width(&self, id: Uuid) -> f32 {

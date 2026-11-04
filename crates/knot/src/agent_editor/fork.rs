@@ -51,6 +51,7 @@ impl AgentPrefill {
                                  awaiting_reason: _,
                                  session_limit: _,
                                  status_text: _,
+                                 working_dir: _,
                                  is_registered: _,
                                  is_pending_start: _,
                                  terminal_title: _,

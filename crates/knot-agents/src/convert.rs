@@ -40,6 +40,7 @@ pub fn from_saved(saved: &SavedAgent) -> Agent {
             awaiting_reason:    None,
             session_limit:      None,
             status_text:        String::new(),
+            working_dir:        None,
             is_registered:      false,
             is_pending_start:   false,
             terminal_title:     String::new(),
