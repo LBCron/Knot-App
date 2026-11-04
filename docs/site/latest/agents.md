@@ -153,7 +153,10 @@ stream, each tool call as its own card - with an icon for the tool and, for a fi
 added/removed line diff - and the shell commands you run from the prompt. A completed tool call
 collapses to its header, while failed and running calls stay open and any call can be opened or
 closed by hand. An active turn shows a turn-in-progress indicator as the conversation's last row,
-below any permission prompt.
+below any permission prompt. Beside it, the turn's running time and roughly how much it has written, as
+Claude Code shows them: `42s · ~1.2k tokens`. The time is exact; the token count is an estimate
+from the text the agent has streamed (about four characters to a token), so a turn that spends a
+long time thinking reads low.
 
 A permission request appears inline with its options as buttons, names the tool it is for, and
 blocks further prompts until you answer. A message sent while a response is in progress is queued

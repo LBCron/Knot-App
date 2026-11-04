@@ -197,7 +197,19 @@ fn render_row(index: usize, state: &PanelState, style: &PanelStyle, list: &ListS
                              .expect("row_at yields Ended only once the session has ended");
             render_ended_banner(cause).into_any_element()
         }
-        Some(PanelRow::Working) => crate::app_support::working_knot_animation().into_any_element(),
+        // How long the turn has run and roughly what it has written, beside
+        // the animation (#35). The animation re-arms its own frames, so the
+        // clock here advances with it; reading it does no I/O.
+        Some(PanelRow::Working) => {
+            h_flex().gap_2()
+                    .items_center()
+                    .child(crate::app_support::working_knot_animation())
+                    .children(state.turn_progress(std::time::SystemTime::now())
+                                   .map(|progress| {
+                                       div().text_xs().opacity(0.7).child(progress.label())
+                                   }))
+                    .into_any_element()
+        }
         None => return div().into_any_element(),
     };
     div().w_full()
