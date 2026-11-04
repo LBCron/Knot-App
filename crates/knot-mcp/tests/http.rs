@@ -170,6 +170,7 @@ fn test_agent(name: &str, registered: bool) -> Agent {
             awaiting_reason:    None,
             session_limit:      None,
             status_text:        String::new(),
+            working_dir:        None,
             is_registered:      registered,
             is_pending_start:   false,
             terminal_title:     String::new(),

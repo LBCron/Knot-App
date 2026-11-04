@@ -197,3 +197,42 @@ fn the_git_panel_and_its_watch_follow_a_changed_folder(cx: &mut TestAppContext) 
                               })
            });
 }
+
+/// An agent that reports a worktree with `set-working-directory` (#25) has
+/// its git read from there: the header's stat changes on the next frame,
+/// without its folder changing or the agent restarting, and goes back when
+/// it clears the working directory.
+#[gpui_kit::test]
+fn the_diff_stat_follows_a_reported_working_directory(cx: &mut TestAppContext) {
+    let mut fixture = fixture(cx);
+    let agent = fixture.agent;
+    fixture.draw_until("the folder's stat", |view| {
+               Fixture::files_changed(view, agent) == Some(0)
+           });
+    let worktree = fixture.dirty.path().to_string_lossy().into_owned();
+
+    fixture.store.lock().set_working_dir(agent, Some(worktree));
+    fixture.frame();
+
+    let stale = fixture.view.read_with(&fixture.window, |view, _| {
+                                Fixture::files_changed(view, agent)
+                            });
+    assert_ne!(stale,
+               Some(0),
+               "the folder's stat is gone on the next frame");
+    fixture.draw_until("the worktree's stat", |view| {
+               Fixture::files_changed(view, agent) == Some(1)
+           });
+    let folder = fixture.store
+                        .lock()
+                        .agent(agent)
+                        .map(|agent| agent.folder.clone());
+    assert_eq!(folder.as_deref(),
+               Some(fixture.clean.path().to_string_lossy().as_ref()),
+               "the folder itself is unchanged");
+
+    fixture.store.lock().set_working_dir(agent, None);
+    fixture.draw_until("the folder's stat again", |view| {
+               Fixture::files_changed(view, agent) == Some(0)
+           });
+}

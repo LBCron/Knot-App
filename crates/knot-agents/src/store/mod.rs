@@ -300,6 +300,23 @@ impl AgentStore {
         }
     }
 
+    /// Sets where `id` says it is working (#25); `None` clears it, and so
+    /// does `dir` being the agent's own folder. Revises the store when the
+    /// effective folder changes, which is what repaints the windows reading
+    /// git from it.
+    pub fn set_working_dir(&mut self, id: Uuid, dir: Option<String>) {
+        let Some(agent) = self.agent(id)
+        else {
+            return;
+        };
+        let dir = dir.filter(|dir| *dir != agent.folder);
+        if agent.working_dir == dir {
+            return;
+        }
+        self.update(id, |agent| agent.working_dir = dir);
+        self.revise();
+    }
+
     pub fn set_terminal_title(&mut self, id: Uuid, title: String) {
         self.update(id, |agent| agent.terminal_title = title);
     }

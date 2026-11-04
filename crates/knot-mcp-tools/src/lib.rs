@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn lists_exactly_the_catalogued_tools_with_object_schemas() {
         let defs = catalog().list();
-        assert_eq!(defs.len(), 20);
+        assert_eq!(defs.len(), 21);
         for def in &defs {
             assert_eq!(def.input_schema.schema_type, "object");
         }
@@ -404,6 +404,7 @@ mod tests {
                          "close-agent",
                          "create-worktree",
                          "set-status",
+                         "set-working-directory",
                          "display-markdown",
                          "view-mermaid",
                          "show-checklist",

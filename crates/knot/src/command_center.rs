@@ -111,7 +111,7 @@ impl CommandCenterWindow {
             store.agents()
                  .iter()
                  .filter(|agent| !agent.is_companion)
-                 .map(|agent| (agent.id, agent.folder.clone()))
+                 .map(|agent| (agent.id, agent.effective_folder().to_owned()))
                  .collect::<Vec<_>>()
         };
         for (id, folder) in folders {

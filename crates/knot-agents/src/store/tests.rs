@@ -8,6 +8,7 @@ mod pull_requests;
 mod revision;
 mod session_limit;
 mod startup_prompt;
+mod working_dir;
 mod workspace;
 
 use super::*;
