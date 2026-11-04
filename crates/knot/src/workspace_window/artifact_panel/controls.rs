@@ -93,21 +93,22 @@ impl WorkspaceWindow {
     /// review has started, and nothing once a verdict is sent.
     fn review_actions(&self, id: Uuid, file: &Path, cx: &mut Context<Self>)
                       -> Vec<gpui_kit::AnyElement> {
-        let file_name = file.file_name()
-                            .map(|name| name.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| file.to_string_lossy().into_owned());
+        let file_name = super::review::file_label(file);
+        let approve = |cx: &mut Context<Self>| {
+            let file = file.to_path_buf();
+            Button::new(element("markdown-approve", id)).icon(IconName::CircleCheck)
+                                                        .label(knot_core::l10n::t("artifact_panel.approve"))
+                                                        .success()
+                                                        .small()
+                                                        .tooltip(knot_core::l10n::t("artifact_panel.approve_tooltip"))
+                                                        .on_click(cx.listener(move |view, _, window, cx| {
+                                                            view.approve_markdown(id, &file, window, cx);
+                                                        }))
+                                                        .into_any_element()
+        };
         match self.markdown_review(id) {
             ReviewState::Viewing => {
-                vec![Button::new(element("markdown-approve", id))
-                         .icon(IconName::CircleCheck)
-                         .label(knot_core::l10n::t("artifact_panel.approve"))
-                         .success()
-                         .small()
-                         .tooltip(knot_core::l10n::t("artifact_panel.approve_tooltip"))
-                         .on_click(cx.listener(move |view, _, _window, cx| {
-                             view.approve_markdown(id, cx);
-                         }))
-                         .into_any_element(),
+                vec![approve(cx),
                      Button::new(element("markdown-review", id))
                          .icon(IconName::Search)
                          .label(knot_core::l10n::t("artifact_panel.review"))
@@ -120,7 +121,14 @@ impl WorkspaceWindow {
                          .into_any_element(),]
             }
             ReviewState::Reviewing => {
-                vec![Button::new(element("markdown-submit-review", id))
+                // Approve stays on offer mid-review for a Panel-mode agent,
+                // taking the comments with it (#30); a Terminal-mode one's
+                // typed comments cannot be read back.
+                let mut actions: Vec<gpui_kit::AnyElement> = self.is_panel_agent(id)
+                                                                 .then(|| approve(cx))
+                                                                 .into_iter()
+                                                                 .collect();
+                actions.push(Button::new(element("markdown-submit-review", id))
                          .icon(IconName::Send)
                          .label(knot_core::l10n::t("artifact_panel.submit_review"))
                          .success()
@@ -129,7 +137,8 @@ impl WorkspaceWindow {
                          .on_click(cx.listener(move |view, _, window, cx| {
                              view.submit_markdown_review(id, window, cx);
                          }))
-                         .into_any_element(),]
+                         .into_any_element());
+                actions
             }
             ReviewState::Submitted => Vec::new(),
         }
