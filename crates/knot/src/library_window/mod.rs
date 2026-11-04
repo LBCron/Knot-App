@@ -21,6 +21,8 @@ mod window;
 
 pub(crate) use library::Library;
 #[cfg(test)]
+pub(crate) use panes::personas::PersonaUser;
+#[cfg(test)]
 pub(crate) use prompt_editor::PromptEditor;
 pub(crate) use prompt_editor::open_prompt_editor;
 pub(crate) use window::LibraryWindow;

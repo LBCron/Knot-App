@@ -421,21 +421,30 @@ fn register_window_actions(store: Arc<Mutex<knot_agents::AgentStore>>,
     }
     crate::keymap::register_global_handlers(Arc::clone(&store), cx);
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenPersonas, cx| {
-              open_library_window(Library::Personas, Arc::clone(&store), cx);
+              open_library_window(Library::Personas,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenPrompts, cx| {
-              open_library_window(Library::Prompts, Arc::clone(&store), cx);
+              open_library_window(Library::Prompts,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     {
-        let store = Arc::clone(&store);
+        let (store, messages) = (Arc::clone(&store), Arc::clone(&messages));
         cx.on_action(move |_: &OpenBench, cx| {
-              open_library_window(Library::Bench, Arc::clone(&store), cx);
+              open_library_window(Library::Bench,
+                                  Arc::clone(&store),
+                                  Arc::clone(&messages),
+                                  cx);
           });
     }
     cx.on_action(move |_: &OpenWorkspaces, cx| {
