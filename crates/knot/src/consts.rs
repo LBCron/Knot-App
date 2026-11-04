@@ -251,7 +251,11 @@ pub(crate) const DARK_STATUS_PALETTE: crate::status_palette::StatusPalette =
                                            stopped:             0x9CA3AF,
                                            card_muted:          0x9A9A9A,
                                            pull_request_behind: 0xEAB308,
-                                           pull_request_merged: 0xA855F7, };
+                                           pull_request_merged: 0xA855F7,
+                                           // Red 500 and 600: saturated where
+                                           // `error`'s red 400 is not (#369).
+                                           session_limit:       0xEF4444,
+                                           session_limit_fill:  0xDC2626, };
 
 /// The status colours on a light surface: the same hues, darker.
 pub(crate) const LIGHT_STATUS_PALETTE: crate::status_palette::StatusPalette =
@@ -262,7 +266,9 @@ pub(crate) const LIGHT_STATUS_PALETTE: crate::status_palette::StatusPalette =
                                            stopped:             0x4B5563,
                                            card_muted:          0x5F6368,
                                            pull_request_behind: 0xA16207,
-                                           pull_request_merged: 0x7E22CE, };
+                                           pull_request_merged: 0x7E22CE,
+                                           session_limit:       0xDC2626,
+                                           session_limit_fill:  0xDC2626, };
 
 /// How much of a pull request row's state colour reaches its background.
 ///

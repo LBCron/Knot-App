@@ -39,6 +39,14 @@ pub(crate) struct StatusPalette {
     pub(crate) pull_request_behind: u32,
     /// A merged pull request. Drawn only as a shape.
     pub(crate) pull_request_merged: u32,
+    /// An agent stopped by its session's usage limit (#369): its dot. A
+    /// stronger, more saturated red than `error`, which reads as peach on
+    /// dark. Drawn only as a shape.
+    pub(crate) session_limit:       u32,
+    /// The "Session limit" badge's fill, under bold white text. A deeper red
+    /// than `session_limit`, so the white text on it reaches 4.5:1; the fill
+    /// itself is a shape against the surface.
+    pub(crate) session_limit_fill:  u32,
 }
 
 /// The palette for the theme `cx` is drawing with.
