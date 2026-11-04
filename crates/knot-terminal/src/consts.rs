@@ -35,3 +35,23 @@ pub(crate) const AGENT_TERM: &str = "xterm-256color";
 /// The `COLORTERM` every agent terminal declares: gpui-terminal draws 24-bit
 /// colour (`Color::Spec`), and tools only use it when this says so.
 pub(crate) const AGENT_COLORTERM: &str = "truecolor";
+
+/// The notices, lower-case, that open a line of Claude Code's output when
+/// its session hits a usage limit (#36): the hard stop, and the wrap-up
+/// allowance it may grant first ("Usage limit reached · wrapping up").
+/// Matched at the start of a line, not anywhere in it, so an agent writing
+/// about limits does not stop itself.
+pub(crate) const SESSION_LIMIT_NOTICES: &[&str] = &["usage limit reached",
+                                                    "you've hit your session limit",
+                                                    "you've hit your usage limit"];
+
+/// Longest line the session-limit scan reads, in bytes. The notices are a
+/// short status line; a longer line is prose and is skipped unread, which
+/// also bounds what the scan buffers between chunks.
+pub(crate) const SESSION_LIMIT_MAX_LINE: usize = 256;
+
+/// How long a notice already reported stays reported. The terminal UI
+/// redraws its status area every frame, so one notice is seen many times;
+/// the same text after this long is a new limit - limits run for hours.
+pub(crate) const SESSION_LIMIT_REPEAT: std::time::Duration =
+    std::time::Duration::from_secs(60 * 60);

@@ -223,6 +223,42 @@ async fn pty_session_output_is_scanned_for_pull_requests() {
     session.shutdown().unwrap();
 }
 
+/// A usage-limit notice in a Claude agent's output is taken by the window's
+/// poll (#36), and in another type's is not read at all: nothing would lift
+/// it again.
+#[tokio::test]
+async fn pty_session_output_is_scanned_for_a_usage_limit() {
+    for (agent_type, expected) in [(knot_core::agent_type::CLAUDE,
+                                    Some(knot_agents::SessionLimit { resets: None })),
+                                   ("codex", None)]
+    {
+        let (mut agent, _folder) = agent_in_temp_dir();
+        agent.agent_type = agent_type.to_owned();
+        let settings = Settings::default();
+        let config = config(&settings, &agent);
+        let mut session =
+            TerminalSession::spawn_pty(&config, EventSink::default(), |_| {}, |_| {}).unwrap();
+
+        // The pull request URL after it marks the notice as already read.
+        session.start(&SessionPlan {
+                   agent_command: String::new(),
+                   initialization_command:
+                       "printf 'Usage limit reached\\nhttps://github.com/acme/widget/pull/42\\n'"
+                           .to_string(),
+               })
+               .unwrap();
+
+        let deadline = Instant::now() + PTY_TIMEOUT;
+        while session.take_pull_request_urls().is_empty() {
+            assert!(Instant::now() < deadline, "the output never arrived");
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert_eq!(session.take_session_limit(), expected, "{agent_type}");
+
+        session.shutdown().unwrap();
+    }
+}
+
 /// Runs `initialization_command` in an agent's shell and waits for
 /// `expected` in its output, failing after [`PTY_TIMEOUT`].
 fn assert_agent_shell_prints(initialization_command: String, expected: &str) {

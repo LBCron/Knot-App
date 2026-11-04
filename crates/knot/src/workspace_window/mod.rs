@@ -49,6 +49,7 @@ mod repaint;
 mod restart_tests;
 #[cfg(test)]
 mod send_prompt_tests;
+mod session_limits;
 mod sessions;
 mod shortcuts;
 #[cfg(test)]
