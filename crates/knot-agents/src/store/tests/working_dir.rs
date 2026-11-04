@@ -61,3 +61,17 @@ fn every_restart_clears_it() {
                "/repo",
                "a kept conversation starts in the folder too");
 }
+
+/// Deactivating clears it too: reactivated, the agent starts in its folder,
+/// so its git must not still be read from the worktree (#375 review).
+#[test]
+fn deactivating_clears_it() {
+    let (mut store, id) = agent();
+    store.set_working_dir(id, Some("/repo-feature".to_string()));
+    let before = store.revision();
+
+    store.deactivate(id);
+
+    assert_eq!(effective(&store, id), "/repo");
+    assert_ne!(store.revision(), before, "the windows reading git repaint");
+}

@@ -154,7 +154,7 @@ pub fn tool_catalog() -> Vec<ToolDefinition> {
                  "Short status text describing what you are currently doing. Use empty string to clear.")],
               &["agentId", "status"]),
          tool(consts::SET_WORKING_DIRECTORY,
-              "Tell Knot which git working tree you are working in, so its git panel and diff stats show that tree rather than your folder. Call it when you start working in a worktree (pass the worktree's root, the folder holding .git), and with an empty path when you go back to your folder. A restart clears it.",
+              "Tell Knot which git working tree you are working in, so its git panel and diff stats show that tree rather than your folder. Call it when you start working in a worktree (pass the worktree's root, the folder holding .git), and with an empty path when you go back to your folder. A restart or deactivation clears it.",
               &[("agentId", "string", "Your agent ID"),
                 ("path",
                  "string",

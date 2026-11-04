@@ -180,9 +180,17 @@ impl AgentStore {
         for companion_id in self.companions(id) {
             deactivated.extend(self.deactivate(companion_id));
         }
+        let mut moved_home = false;
         if let Some(agent) = self.agent_mut(id) {
             agent.activated = false;
+            // Its next session starts in its folder, so its git is read
+            // from there again (#25): a deactivated agent is no longer in
+            // the worktree it reported.
+            moved_home = agent.working_dir.take().is_some();
             deactivated.push(id);
+        }
+        if moved_home {
+            self.revise();
         }
         deactivated
     }

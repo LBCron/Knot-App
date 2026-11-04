@@ -63,7 +63,7 @@ Each agent connects on a URL that names it (`…/mcp?agent=<id>`), which Knot pl
 | Tool | Purpose |
 | --- | --- |
 | `set-status` | Set the agent's human-readable status text; an empty string clears it, separate from the automatic state. |
-| `set-working-directory` | Tell Knot which git working tree the agent is working in (a worktree's root), so the git panel, the header's diff stat and the dashboard cards show that tree instead of the agent's folder. An empty path, or the agent's own folder, goes back to the folder; a restart clears it. The agent's session keeps running where it started. |
+| `set-working-directory` | Tell Knot which git working tree the agent is working in (a worktree's root), so the git panel, the header's diff stat and the dashboard cards show that tree instead of the agent's folder. An empty path, or the agent's own folder, goes back to the folder; a restart or deactivation clears it. The agent's session keeps running where it started. |
 | `display-markdown` | Show a Markdown file in the calling agent's panel, optionally expanded. |
 | `view-mermaid` | Show a Mermaid diagram in the calling agent's panel, optionally titled. |
 | `show-checklist` | Show a checklist of questions and checkbox items in the calling agent's panel. The user answers in place and presses Send to deliver the answers. Calling it again keeps answers for unchanged items. |

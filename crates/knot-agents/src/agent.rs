@@ -114,7 +114,8 @@ pub struct Agent {
     /// Where the agent says it is working, when that is not its folder: a
     /// worktree it moved into (#25). Set by the `set-working-directory` MCP
     /// tool through [`crate::AgentStore::set_working_dir`], never saved, and
-    /// cleared by every restart, which starts the agent in its folder again.
+    /// cleared by every restart and by deactivation, after which the agent's
+    /// next session starts in its folder again.
     /// Git is read from [`Agent::effective_folder`]; where the agent's
     /// session runs does not change.
     pub working_dir:       Option<String>,

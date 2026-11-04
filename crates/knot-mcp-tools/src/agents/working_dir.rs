@@ -6,7 +6,8 @@
 //!
 //! Knot cannot see the move itself: an ACP session's cwd is fixed when it
 //! opens, and an agent's `cd` does not change its own process's directory.
-//! The agent has to say. The value is runtime only; a restart clears it.
+//! The agent has to say. The value is runtime only; a restart or deactivation
+//! clears it.
 
 use std::path::Path;
 

@@ -20,9 +20,10 @@ the choice constrains later features that want the same answer.
 ## Decisions
 
 - **Runtime only, with a fallback.** `working_dir` is not saved; whenever it is
-  unset, Knot reads git from `Agent.folder` as before. A restart clears it,
-  because a restarted agent starts in its folder. A stale value can therefore
-  last at most until the agent restarts or reports again.
+  unset, Knot reads git from `Agent.folder` as before. A restart or a
+  deactivation clears it, because the agent's next session starts in its
+  folder. A stale value can therefore last at most until the agent restarts,
+  is deactivated or reports again.
 - **A working-tree root, checked.** The path must exist and be the root of a
   git working tree (`knot_git::is_working_tree`), so the panel always has a
   repository to read. A subfolder is refused with a message naming the
