@@ -18,6 +18,7 @@ mod bench_popover;
 mod changes_counts;
 mod changes_tab;
 mod chrome;
+mod codex_usage_refresh;
 mod creation;
 #[cfg(test)]
 mod creation_tests;

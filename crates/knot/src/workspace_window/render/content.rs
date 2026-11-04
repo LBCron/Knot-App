@@ -171,6 +171,9 @@ impl WorkspaceWindow {
                                             )
                                             .into_any_element()
                                     });
+                                                        // Codex nearing its
+                                                        // usage limit (#291).
+                                                        let pane = self.with_usage_banner(pane, cx);
                                                         let pane =
                                                             self.with_side_panels(pane, window, cx);
                                                         v_flex().flex_1()

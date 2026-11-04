@@ -82,6 +82,7 @@ mod sidebar;
 mod sidebar_compact;
 mod status_dot;
 mod title_bar;
+mod usage_banner;
 
 /// The rows `render` has already built by the time it hands the sidebar
 /// over, in the order they are stacked.
@@ -517,6 +518,8 @@ impl Render for WorkspaceWindow {
         self.refresh_pull_request_states(cx);
         // The same gate for the Issues and OpenSpec tabs' data.
         self.refresh_work_items(cx);
+        // Only while a Codex agent is in the window (#291).
+        self.refresh_codex_usage();
         // The one place the compact breakpoint is read. Every surface that
         // changes below it takes this `bool`, so none of them can disagree
         // about where compact begins.

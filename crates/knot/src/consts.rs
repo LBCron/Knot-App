@@ -455,3 +455,19 @@ pub(crate) const LINK_TOOLTIP_OFFSET: f32 = 14.;
 pub(crate) const LINK_TOOLTIP_MAX_WIDTH: f32 = 480.;
 /// The least room a link's URL label keeps from the window's edges.
 pub(crate) const LINK_TOOLTIP_WINDOW_MARGIN: f32 = 8.;
+
+/// How much of a Codex usage window must be used before an agent's pane says
+/// it is approaching the limit (#291). Codex's own CLI warns from here up.
+pub(crate) const CODEX_USAGE_NEAR_LIMIT_PERCENT: f64 = 75.0;
+
+/// How much of the end of a Codex session file is read for its latest usage
+/// snapshot. Snapshots come with every model response, so the newest is near
+/// the end; a long session's file runs to megabytes.
+pub(crate) const CODEX_USAGE_TAIL_BYTES: u64 = 256 * 1024;
+
+/// How often Codex's usage is re-read while a Codex agent is in the window.
+/// A file listing and a tail read, off the main thread.
+pub(crate) const CODEX_USAGE_MAX_AGE: Duration = Duration::from_secs(60);
+
+/// Where Codex's usage can be extended, as its own limit message names it.
+pub(crate) const CODEX_USAGE_URL: &str = "https://chatgpt.com/codex/settings/usage";

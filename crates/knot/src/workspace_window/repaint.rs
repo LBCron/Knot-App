@@ -122,6 +122,8 @@ impl WorkspaceWindow {
         // answer until something unrelated repainted. One local for the
         // three, whose own reads are taken apart before they are combined.
         let work_items_landed = self.work_items.take_changed();
+        // Codex's usage, read from its session files on the same terms (#291).
+        let codex_usage_landed = self.codex_usage.take_changed();
         // The git panel's three off-main-thread sources, all draining here
         // for the same reason: none of them has a GPUI context, so each only
         // leaves something behind for this tick to act on. A staging
@@ -186,6 +188,7 @@ impl WorkspaceWindow {
            || pull_requests_expiring
            || store_revised
            || work_items_landed
+           || codex_usage_landed
            || git_actions_landed
            || git_commits_landed
            || git_watches_fired
