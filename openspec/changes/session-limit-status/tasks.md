@@ -8,3 +8,5 @@
       keep the limit on the agent while it is in Error
 - [x] 1.3 Name it "Session limit" in the header, the sidebar dot's tooltip and
       the dashboard card, with the reset time where there is room
+- [x] 1.4 Draw it in a stronger red than Error, with a bold badge for the
+      label (#369)

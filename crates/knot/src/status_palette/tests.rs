@@ -85,7 +85,9 @@ fn failures(mode: ThemeMode, cx: &mut TestAppContext) -> Vec<String> {
                 ("stopped", palette.stopped),
                 ("card muted", palette.card_muted)];
     let shapes = [("pull request behind", palette.pull_request_behind),
-                  ("pull request merged", palette.pull_request_merged)];
+                  ("pull request merged", palette.pull_request_merged),
+                  ("session limit", palette.session_limit),
+                  ("session limit badge", palette.session_limit_fill)];
     let wanted = text.iter()
                      .map(|&(name, value)| (name, value, TEXT_CONTRAST))
                      .chain(shapes.iter()
@@ -114,6 +116,38 @@ fn light_status_colours_reach_contrast(cx: &mut TestAppContext) {
 fn dark_status_colours_reach_contrast(cx: &mut TestAppContext) {
     let failures = failures(ThemeMode::Dark, cx);
     assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// The "Session limit" badge's white text against its own fill (#369): the
+/// one pairing here that is not a status colour on a theme surface.
+#[test]
+fn the_session_limit_badge_text_reaches_contrast() {
+    for palette in [LIGHT_STATUS_PALETTE, DARK_STATUS_PALETTE] {
+        let ratio = contrast(gpui_kit::white().into(), rgb(palette.session_limit_fill));
+        assert!(ratio >= TEXT_CONTRAST,
+                "white on {:06X} is {ratio:.2}:1, needs {TEXT_CONTRAST}:1",
+                palette.session_limit_fill);
+    }
+}
+
+/// #369: on dark, `error`'s red 400 reads as peach - not another hue, but a
+/// red washed out towards white. The session-limit red has to be a more
+/// saturated one. HSV saturation, (max - min) / max, is what measures that
+/// wash: HSL's would rate the pale red as the more saturated.
+#[test]
+fn the_dark_session_limit_red_is_more_saturated_than_error() {
+    let saturation = |colour: u32| -> f32 {
+        let channels = [(colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF];
+        let max = *channels.iter().max().unwrap() as f32;
+        let min = *channels.iter().min().unwrap() as f32;
+        (max - min) / max
+    };
+    let palette = DARK_STATUS_PALETTE;
+
+    assert!(saturation(palette.session_limit) > saturation(palette.error) + 0.1,
+            "{:06X} is not clearly more saturated than error's {:06X}",
+            palette.session_limit,
+            palette.error);
 }
 
 /// The palette follows the theme: a light theme gets the light shades.

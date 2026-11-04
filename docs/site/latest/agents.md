@@ -128,7 +128,7 @@ sort the dashboard.
 | Idle | Green | Quiet and waiting. |
 | Awaiting input | Red | Needs you - for example a permission prompt is open. |
 | Error | Red | The session ended with an error. |
-| Session limit | Red | The agent's provider refused the turn: its session or usage limit is reached. The header says when it resets, if the provider said. |
+| Session limit | Bright red, bold badge | The agent's provider refused the turn: its session or usage limit is reached. The dot is a stronger red than Error's, and the header and dashboard card show "Session limit" as a bold white-on-red badge. The header says when it resets, if the provider said. |
 
 Terminal output moves an agent to Working and back to Idle after a short quiet period; typing keeps
 it Working. A permission request moves it to Awaiting input immediately; Return moves it to Working
