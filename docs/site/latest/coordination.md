@@ -139,6 +139,8 @@ A commit is rejected, leaving any previous graph intact, when a dependency names
 
 On commit, a task with no dependencies is `ready` and every other task is `pending`. A `pending` task becomes `ready` as soon as all its dependencies are `done`. `dispatch-task` delivers a ready task's goal to its assignee under the messaging rules and marks it dispatched; it is refused, leaving the task ready, when the caller has no committed graph, the task is not ready, no candidate resolves for a tag assignee, or messaging rejects the delivery, and a refusal names the dependencies that are not yet done. `complete-task` reports a task done or failed and returns which tasks became ready and which became blocked. `task-status` lists the graph, and is an empty list rather than an error before anything is planned.
 
+A task can also carry `resetContext: true`, for a step that should start clean rather than in the conversation the assignee's last step left behind. Dispatching it delivers the goal as usual, then restarts the assignee on a new conversation as soon as it is not working or awaiting input - a step still under way is finished first, never cut short. The goal waits in the assignee's inbox through the restart, and the assignee is prompted to read it only afterwards. An agent cannot dispatch such a task to itself, since the restart would end its own turn.
+
 Committing a graph while one exists preserves the state of tasks present in both and never cancels, recalls, or duplicates a dispatched task. Committing also shows the plan in the owning agent's panel as a diagram of tasks and dependencies, with each task's current state.
 
 ## Agent hooks

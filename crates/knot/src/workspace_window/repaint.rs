@@ -58,6 +58,10 @@ impl WorkspaceWindow {
             self.remove_agent(*id, cx);
             cx.notify();
         }
+        // Before the nudges: an agent a dispatched task asked to start fresh
+        // reads that task in its new conversation, not its old one (#331).
+        // A local, so it runs every tick whatever the chain below decides.
+        let fresh_contexts_started = self.restart_for_fresh_context(cx);
         // Messages arrive from the MCP server on another thread; this poll
         // is where an agent going idle is noticed.
         self.deliver_inbox_nudges(cx);
@@ -170,6 +174,7 @@ impl WorkspaceWindow {
         // notify from - see `workspace_window::mcp_panel::probe`.
         let mcp_probed = self.mcp_probe_tick(cx);
         if panel_states_moved
+           || fresh_contexts_started
            || panel_status_landed
            || panel_dirty
            || spinner_dirty

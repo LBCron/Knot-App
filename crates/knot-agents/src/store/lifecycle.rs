@@ -38,6 +38,7 @@ impl AgentStore {
                             idle_since: None,
                             awaiting_reason: None,
                             session_limit: None,
+                            fresh_context_requested: false,
                             status_text: String::new(),
                             is_registered: false,
                             is_pending_start: false,
@@ -207,6 +208,8 @@ impl AgentStore {
         agent.acp_session_id = None;
         agent.resume_session_id = None;
         agent.fork_session = false;
+        // A fresh conversation is what a dispatched task asked for (#331).
+        agent.fresh_context_requested = false;
         self.recreate_terminal(id)
     }
 

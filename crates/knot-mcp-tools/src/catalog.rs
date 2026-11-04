@@ -169,8 +169,9 @@ pub fn tool_catalog() -> Vec<ToolDefinition> {
                 ("tasks",
                  "array",
                  "Tasks as objects: id (unique in this plan), goal, and optionally assignee \
-                  (an agent name or ID), capabilities (tags to resolve at dispatch time) and \
-                  dependsOn (ids in this same plan)")],
+                  (an agent name or ID), capabilities (tags to resolve at dispatch time), \
+                  dependsOn (ids in this same plan) and resetContext (true to start the \
+                  assignee on a fresh conversation for this task, once it is not working)")],
               &["agentId", "tasks"]),
          tool(consts::DISPATCH_TASK,
               "Dispatch one ready task from your committed plan. Refused while any \
