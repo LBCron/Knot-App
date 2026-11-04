@@ -28,6 +28,7 @@ impl WorkspaceWindow {
     /// Requests a fresh working-tree status for `id` if the cached one has
     /// aged out.
     pub(in crate::workspace_window) fn refresh_git_status(&mut self, id: Uuid, folder: &str) {
+        self.follow_git_folder(id, folder);
         let Some(writer) = self.git_status
                                .claim_refresh(id, consts::GIT_STATUS_MAX_AGE)
         else {
@@ -42,6 +43,7 @@ impl WorkspaceWindow {
     /// one map lookup per frame rather than one per row.
     pub(in crate::workspace_window) fn refresh_git_diff(&mut self, id: Uuid, folder: &str,
                                                         selection: &Selection) {
+        self.follow_git_folder(id, folder);
         let Some(writer) = self.git_diffs
                                .claim_refresh(selection.key(id), consts::GIT_DIFF_MAX_AGE)
         else {
@@ -96,6 +98,28 @@ impl WorkspaceWindow {
         self.git_panel_resize.remove(&id);
         self.forget_git_diff_list(id);
         self.forget_artifact_panel(id);
+    }
+
+    /// Keeps `id`'s git state to the folder it is read from now (#25).
+    ///
+    /// The caches are keyed by agent, so a changed folder would otherwise
+    /// serve the old tree's status, diffs and diff stat until they aged out,
+    /// and the panel's watch, started once, would follow the old tree for
+    /// good. Every read of `id`'s git comes through here first, so a move is
+    /// noticed on the frame it happens: what was read is dropped, the file
+    /// selection with it (it names a path in the old tree), and a running
+    /// watch is moved to the new folder. An unchanged folder is a string
+    /// compare.
+    pub(in crate::workspace_window) fn follow_git_folder(&mut self, id: Uuid, folder: &str) {
+        if !self.git_read_folders.moved(id, folder) {
+            return;
+        }
+        self.invalidate_git_state(id);
+        self.git_selection.remove(&id);
+        if self.git_watches.contains_key(&id) {
+            self.stop_git_watch(id);
+            self.start_git_watch(id, folder);
+        }
     }
 
     /// Invalidates what the panel knows about `id` after the panel itself
