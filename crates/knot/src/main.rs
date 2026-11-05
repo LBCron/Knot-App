@@ -6,6 +6,7 @@
 //! newer path replaced.
 
 mod about_window;
+mod adapter_updates;
 mod agent_editor;
 mod agent_menu;
 mod agent_menu_entries;
@@ -19,6 +20,7 @@ mod autopilot_decision_sheet;
 mod broadcast_sheet;
 mod bug_report;
 mod capped_scroll;
+mod codex_usage;
 mod command_center;
 mod commit_window;
 mod composer_scan;

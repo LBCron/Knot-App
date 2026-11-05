@@ -82,6 +82,9 @@ impl WorkspaceWindow {
         // Every agent's taps, not just the selected one's: an agent working
         // in an unselected pane is the case this feature exists for.
         let pull_requests_recorded = self.drain_pull_requests(cx);
+        // A terminal agent's usage-limit notice, read on its PTY thread
+        // (#36). A local: the take clears as it reads.
+        let session_limits_landed = self.drain_session_limits();
         let prompts_completed = self.drain_prompt_results();
         let panel_states_moved = self.sync_panel_agent_states(cx);
         // The other half of that sync. `sync_panel_agent_states` says a
@@ -126,6 +129,8 @@ impl WorkspaceWindow {
         // answer until something unrelated repainted. One local for the
         // three, whose own reads are taken apart before they are combined.
         let work_items_landed = self.work_items.take_changed();
+        // Codex's usage, read from its session files on the same terms (#291).
+        let codex_usage_landed = self.codex_usage.take_changed();
         // The git panel's three off-main-thread sources, all draining here
         // for the same reason: none of them has a GPUI context, so each only
         // leaves something behind for this tick to act on. A staging
@@ -175,6 +180,7 @@ impl WorkspaceWindow {
         let mcp_probed = self.mcp_probe_tick(cx);
         if panel_states_moved
            || fresh_contexts_started
+           || session_limits_landed
            || panel_status_landed
            || panel_dirty
            || spinner_dirty
@@ -191,6 +197,7 @@ impl WorkspaceWindow {
            || pull_requests_expiring
            || store_revised
            || work_items_landed
+           || codex_usage_landed
            || git_actions_landed
            || git_commits_landed
            || git_watches_fired

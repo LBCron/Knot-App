@@ -250,6 +250,10 @@ settings:
     delete_persona: "Delete Persona"
     delete_body: "This permanently deletes \"%{name}\". This can't be undone."
     edit: "Edit persona"
+    delete: "Delete persona"
+    in_use_by: "In use by %{agents}"
+    used_by: "Used by"
+    show_agent: "Show this agent"
     add: "Add Persona…"
     restore_defaults: "Restore Defaults"
     import_from_library: "Import from Library…"
@@ -854,6 +858,10 @@ pull_requests:
   open_in_browser: "Open in Browser"
   copy_url: "Copy URL"
 
+# A background adapter update check finding an update (#367).
+adapter_updates:
+  notification_title: "Knot - Adapter update"
+  notification_body: "%{adapter} %{version} is available. Update it in Settings > Coding."
 mcp_server:
   failure_title: "Knot - MCP server"
   failure_body: "The MCP server is not running. Agents cannot reach Knot until it recovers."
@@ -1120,3 +1128,11 @@ prompt_variables:
   date: "today's date"
   clipboard: "the clipboard's text"
   clipboard_in_startup: "{{clipboard}} is always empty in a startup prompt, which is sent without you choosing it."
+
+# The banner over a Codex agent's pane when its usage allowance is nearly
+# spent (#291). `when` is the reset as a local date and time.
+usage:
+  approaching_limit: "Approaching usage limit"
+  resets_at: "Resets at %{when}"
+  get_more: "Get more usage"
+  dismiss: "Dismiss"

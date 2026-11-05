@@ -26,7 +26,9 @@ including deleted ones; the active list - what an agent can select and what look
 resolves against - excludes deleted personas and is sorted by name. A system persona
 is soft-deleted, its record kept; a user persona is hard-deleted, its record removed.
 A persona assigned to agents cannot be deleted: its delete action is disabled and its
-tooltip reports how many agents use it.
+tooltip names the agents using it. Its row in the Personas window also lists them under
+"Used by"; click a name to open that agent's workspace window with the agent selected,
+where you can give it a different persona.
 
 ## Shipped personas and restore defaults
 

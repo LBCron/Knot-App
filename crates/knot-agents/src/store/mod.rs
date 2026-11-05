@@ -254,6 +254,46 @@ impl AgentStore {
         }
     }
 
+    /// Sets `id`'s state as a terminal agent's output tracker or hooks
+    /// inferred it (#36).
+    ///
+    /// While the agent is held by a session limit - in Error with one, or
+    /// in Input over one - Working and Idle do not land: the wrap-up a
+    /// Claude session is allowed past its limit goes on printing, calling
+    /// tools and ends in a Stop, and none of that lifts the limit. They put
+    /// the agent back in Error instead. Input does land, keeping the limit
+    /// underneath: a permission the wrap-up asks for needs the user more
+    /// urgently than a limit they can do nothing about. A prompt the user
+    /// submits lifts the limit, by clearing it through
+    /// [`Self::set_session_limit`] first.
+    pub fn set_tracked_state(&mut self, id: Uuid, state: AgentState) {
+        let held = self.agent(id).is_some_and(|agent| {
+                                     agent.session_limit.is_some()
+                                     && matches!(agent.state, AgentState::Error | AgentState::Input)
+                                 });
+        if !held {
+            self.set_state(id, state);
+            return;
+        }
+        let shown = if state == AgentState::Input {
+            AgentState::Input
+        }
+        else {
+            AgentState::Error
+        };
+        let changed = self.agent(id).is_some_and(|agent| agent.state != shown);
+        // Not through `set_state`, which would drop the limit with Error.
+        self.update(id, |agent| {
+                if shown != AgentState::Input {
+                    agent.awaiting_reason = None;
+                }
+                agent.state = shown;
+            });
+        if changed {
+            self.revise();
+        }
+    }
+
     /// Records why `id` is waiting on the user; see
     /// [`Agent::awaiting_reason`]. Set before or after the state moves to
     /// Input - the two arrive from different sinks in either order - and
@@ -311,6 +351,23 @@ impl AgentStore {
         if changed {
             self.revise();
         }
+    }
+
+    /// Sets where `id` says it is working (#25); `None` clears it, and so
+    /// does `dir` being the agent's own folder. Revises the store when the
+    /// effective folder changes, which is what repaints the windows reading
+    /// git from it.
+    pub fn set_working_dir(&mut self, id: Uuid, dir: Option<String>) {
+        let Some(agent) = self.agent(id)
+        else {
+            return;
+        };
+        let dir = dir.filter(|dir| *dir != agent.folder);
+        if agent.working_dir == dir {
+            return;
+        }
+        self.update(id, |agent| agent.working_dir = dir);
+        self.revise();
     }
 
     pub fn set_terminal_title(&mut self, id: Uuid, title: String) {

@@ -110,12 +110,20 @@ pub struct Agent {
     /// [`crate::AgentStore::set_session_limit`] and cleared by
     /// [`crate::AgentStore::set_state`] as the agent leaves Error.
     pub session_limit:           Option<crate::SessionLimit>,
+    pub status_text:             String,
+    /// Where the agent says it is working, when that is not its folder: a
+    /// worktree it moved into (#25). Set by the `set-working-directory` MCP
+    /// tool through [`crate::AgentStore::set_working_dir`], never saved, and
+    /// cleared by every restart and by deactivation, after which the agent's
+    /// next session starts in its folder again.
+    /// Git is read from [`Agent::effective_folder`]; where the agent's
+    /// session runs does not change.
+    pub working_dir:             Option<String>,
     /// A task was dispatched to this agent asking for a fresh conversation
     /// (#331). The window restarts it without its conversation the next
     /// time it is not working, and holds its inbox nudge until then; see
     /// [`crate::AgentStore::request_fresh_context`].
     pub fresh_context_requested: bool,
-    pub status_text:             String,
     pub is_registered:           bool,
     pub is_pending_start:        bool,
     pub terminal_title:          String,
@@ -198,6 +206,12 @@ impl Agent {
         knot_core::agent_type::is_shell(&self.agent_type)
     }
 
+    /// The folder the agent's git is read from: its working directory when
+    /// it has reported one, its folder otherwise.
+    pub fn effective_folder(&self) -> &str {
+        self.working_dir.as_deref().unwrap_or(&self.folder)
+    }
+
     /// The last component of the agent's folder, for the places that label
     /// an agent by where it works rather than by its full path - a sidebar
     /// row, a dashboard card. Falls back to the whole folder when there is
@@ -276,8 +290,9 @@ mod tests {
                 idle_since:              None,
                 awaiting_reason:         None,
                 session_limit:           None,
-                fresh_context_requested: false,
                 status_text:             String::new(),
+                working_dir:             None,
+                fresh_context_requested: false,
                 is_registered:           false,
                 is_pending_start:        false,
                 terminal_title:          String::new(),

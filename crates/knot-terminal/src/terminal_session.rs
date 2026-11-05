@@ -1,5 +1,6 @@
 //! A shell agent's terminal: a `gpui_terminal::Terminal` plus the activity
-//! tracker that reads its output, and the pull request scan beside it.
+//! tracker that reads its output, and the pull request and session-limit
+//! scans beside it.
 //!
 //! The grid, the transport and the input encodings live in `gpui-terminal`;
 //! what is Knot's is here - which shell runs where, what the tracker sees,
@@ -13,13 +14,15 @@ use knot_agent_launch::{registration_prompt, supports_inline_registration};
 use parking_lot::Mutex;
 
 use crate::pull_requests::PullRequestTap;
+use crate::session_limits::SessionLimitTap;
 use crate::{Result, SessionConfig, SessionPlan};
 
 pub struct TerminalSession<T> {
-    terminal:      Terminal<T>,
-    tracker:       Arc<Tracker>,
-    pull_requests: Arc<Mutex<PullRequestTap>>,
-    started:       bool,
+    terminal:       Terminal<T>,
+    tracker:        Arc<Tracker>,
+    pull_requests:  Arc<Mutex<PullRequestTap>>,
+    session_limits: Arc<Mutex<SessionLimitTap>>,
+    started:        bool,
 }
 
 impl<T: Transport> TerminalSession<T> {
@@ -33,6 +36,7 @@ impl<T: Transport> TerminalSession<T> {
         Self { terminal,
                tracker,
                pull_requests: Arc::default(),
+               session_limits: Arc::default(),
                started: false }
     }
 
@@ -81,6 +85,18 @@ impl<T: Transport> TerminalSession<T> {
         self.pull_requests.lock().take()
     }
 
+    /// Take the usage limit the output announced since the last call, if
+    /// any. See [`crate::session_limits`].
+    pub fn take_session_limit(&self) -> Option<knot_agents::SessionLimit> {
+        self.session_limits.lock().take()
+    }
+
+    /// The limit this session reported was lifted; see
+    /// [`crate::session_limits`].
+    pub fn rearm_session_limit(&self) {
+        self.session_limits.lock().rearm();
+    }
+
     /// Stops the tracker and ends the shell.
     ///
     /// A shell that already exited is left alone: killing it again fails with
@@ -116,16 +132,25 @@ impl TerminalSession<PtyTransport> {
         // tracker through a slot filled once both exist.
         let tracker_slot: Arc<Mutex<Option<Arc<Tracker>>>> = Arc::default();
         let pull_requests: Arc<Mutex<PullRequestTap>> = Arc::default();
+        let session_limits: Arc<Mutex<SessionLimitTap>> = Arc::default();
+        // Only where something lifts the limit again: Claude Code's
+        // UserPromptSubmit hook. Read for an agent with no such hook, a
+        // limit would hold its status until the shell exited.
+        let watch_limits = config.agent.agent_type == knot_core::agent_type::CLAUDE;
         let command = config.shell.command(&config.agent.folder);
         let terminal = TerminalBuilder::new().on_output({
                                                  let tracker_slot = Arc::clone(&tracker_slot);
                                                  let pull_requests = Arc::clone(&pull_requests);
+                                                 let session_limits = Arc::clone(&session_limits);
                                                  move |bytes| {
                                                      let tracker = tracker_slot.lock().clone();
                                                      if let Some(tracker) = tracker {
                                                          tracker.on_terminal_activity();
                                                      }
                                                      pull_requests.lock().feed(bytes);
+                                                     if watch_limits {
+                                                         session_limits.lock().feed(bytes);
+                                                     }
                                                      on_output(bytes);
                                                  }
                                              })
@@ -145,6 +170,7 @@ impl TerminalSession<PtyTransport> {
         Ok(Self { terminal,
                   tracker,
                   pull_requests,
+                  session_limits,
                   started: false })
     }
 }

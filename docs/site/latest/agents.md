@@ -117,6 +117,10 @@ Right-clicking the empty space in the sidebar opens a workspace menu: New Agent,
 Restart All, Close All, Deactivate All, and Broadcast to All Agents…. Every item is shown, with the
 ones that do not apply disabled; New from Bench deploys a saved template.
 
+Drag the sidebar narrower than 160px and it turns compact: each agent is just its avatar, with its
+state dot on the corner. Rest the pointer on an avatar to see the agent's name, its state (such as
+"Awaiting input" and why) and what it says it is doing.
+
 ## Activity status
 
 Each running agent has one status, shown on its sidebar state dot and its dashboard card and used to
@@ -136,13 +140,24 @@ and Escape to Idle. A permission answered any other way, such as cancelled by St
 ending, takes the agent out of Awaiting input as soon as it is answered. A shell agent stays Idle
 whatever its output.
 
+A Codex agent also warns before it reaches the limit. When Codex has used 75% or more of its 5-hour or
+weekly allowance, a banner over the agent reads **Approaching usage limit**, says when that window
+resets, and offers **Get more usage**, which opens Codex's usage settings. Dismiss it with the ×; it
+stays dismissed until that window resets. Knot reads these figures from Codex's own session files
+(`~/.codex/sessions`, or under `$CODEX_HOME`) and shows nothing if they are missing. Claude agents
+don't show this yet: their ACP adapter doesn't report usage.
+
 An agent in Awaiting input says why when it knows: hover its state dot, or read the line under its
 dashboard card. A pending permission request shows its title (`permission requested for Bash`); a
 wait Autopilot started says what it read in the agent's last reply (`Autopilot: the last reply asks
 you a question`). The reason goes as soon as the agent leaves Awaiting input. A session that exits non-zero, or
 a panel connection that ends with an error, moves the agent to Error. A panel agent whose turn is
 refused with a session or usage limit ("You've hit your session limit · resets 5:20pm") shows Session
-limit instead, in red, until you send it another prompt. The dashboard's cards add a
+limit instead, in red, until you send it another prompt. A Claude agent in the terminal does the
+same when it prints a usage-limit notice - including "Usage limit reached · wrapping up", when Claude
+lets it finish what it was doing first: it stays Session limit through the wrap-up and after it, until
+you submit another prompt, and Autopilot leaves it alone. A permission the wrap-up asks for still shows
+as Awaiting input, and the agent goes back to Session limit once you answer it. The dashboard's cards add a
 glanceable working/thinking indicator that reflects the same status and animates on each change; the
 sidebar row does not draw it.
 

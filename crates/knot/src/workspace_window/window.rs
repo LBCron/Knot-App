@@ -63,6 +63,17 @@ pub(crate) struct WorkspaceWindow {
     /// The Issues and OpenSpec tabs' repositories, issues and changes,
     /// fetched off the main thread and drained by `repaint_poll_tick`.
     pub(super) work_items:                       super::work_items::WorkItemCaches,
+    /// Codex's usage allowance, read from its session files off the main
+    /// thread while a Codex agent is in the window (#291).
+    pub(super) codex_usage:
+        crate::refresh_cache::RefreshCache<(), Option<crate::codex_usage::CodexUsage>>,
+    /// The reset the user dismissed the usage banner for: hidden until the
+    /// window resets, then shown again if the next one fills up.
+    pub(super) codex_usage_dismissed:            Option<Option<std::time::SystemTime>>,
+    /// How Codex's usage is read: `codex_usage::read_current` - this
+    /// machine's own `~/.codex` - everywhere but a test, which swaps in a
+    /// stub rather than read the developer's files.
+    pub(super) codex_usage_source:               fn() -> Option<crate::codex_usage::CodexUsage>,
     /// Agents whose PTY process has exited, queued by the reader thread and
     /// drained by the repaint poll - the callback runs off the main thread
     /// and cannot touch the view directly.

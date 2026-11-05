@@ -15,6 +15,8 @@ mod messaging;
 mod panels;
 mod repos;
 mod responses;
+#[cfg(test)]
+mod session_limit_tests;
 mod tasks;
 
 use std::collections::HashMap;
@@ -184,7 +186,8 @@ impl McpToolCatalog {
         let reasons = Arc::clone(&self.agents);
         let awaiting_input = self.awaiting_input.lock().clone();
         let sink = EventSink { on_status: Some(Box::new(move |event| {
-                                                   agents.lock().set_state(id, event.status);
+                                                   agents.lock()
+                                                         .set_tracked_state(id, event.status);
                                                })),
                                // The hook's own message - "Claude needs your
                                // permission to use Bash" - is why the agent
@@ -293,6 +296,12 @@ impl AgentHookHandler for McpToolCatalog {
                                                            hook_input_message(&request.payload)
                                                        })
                                                        .flatten();
+        // A prompt the user submits is what lifts a session limit seen in
+        // the terminal (#36); everything else the hooks report is the
+        // wrap-up, and `set_tracked_state` keeps the limit through it.
+        if request.hook.as_deref() == Some("UserPromptSubmit") {
+            self.agents.lock().set_session_limit(id, None);
+        }
         if self.tracker_for(id, &request.agent) {
             self.trackers
                 .lock()
@@ -301,7 +310,7 @@ impl AgentHookHandler for McpToolCatalog {
                 .apply_hook_status(state, input_message);
         }
         else {
-            self.agents.lock().set_state(id, state);
+            self.agents.lock().set_tracked_state(id, state);
         }
         // Going idle is this feed's turn-end: the agent has stopped working,
         // so whatever it delegated during the turn is over. The ACP feed has
@@ -386,7 +395,7 @@ mod tests {
     #[test]
     fn lists_exactly_the_catalogued_tools_with_object_schemas() {
         let defs = catalog().list();
-        assert_eq!(defs.len(), 20);
+        assert_eq!(defs.len(), 21);
         for def in &defs {
             assert_eq!(def.input_schema.schema_type, "object");
         }
@@ -404,6 +413,7 @@ mod tests {
                          "close-agent",
                          "create-worktree",
                          "set-status",
+                         "set-working-directory",
                          "display-markdown",
                          "view-mermaid",
                          "show-checklist",

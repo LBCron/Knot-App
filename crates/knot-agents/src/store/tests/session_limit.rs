@@ -54,3 +54,72 @@ fn a_new_limit_moves_the_revision_and_a_repeat_does_not() {
     store.set_session_limit(id, Some(limit()));
     assert_eq!(store.revision(), after);
 }
+
+/// A terminal agent's trackers report what its wrap-up does; none of it
+/// lifts the limit (#36).
+#[test]
+fn tracked_states_do_not_lift_a_limit() {
+    for next in [AgentState::Running, AgentState::Idle] {
+        let mut store = AgentStore::new();
+        let id = store.create("/tmp/a", CreateOptions::default());
+        store.set_session_limit(id, Some(limit()));
+        store.set_state(id, AgentState::Error);
+
+        store.set_tracked_state(id, next);
+
+        let agent = store.agent(id).unwrap();
+        assert_eq!(agent.state, AgentState::Error, "{next:?} landed");
+        assert_eq!(agent.active_session_limit(), Some(&limit()));
+    }
+}
+
+/// Clearing the limit - a submitted prompt - lets the next report land.
+#[test]
+fn a_cleared_limit_lets_tracked_states_land() {
+    let mut store = AgentStore::new();
+    let id = store.create("/tmp/a", CreateOptions::default());
+    store.set_session_limit(id, Some(limit()));
+    store.set_state(id, AgentState::Error);
+
+    store.set_session_limit(id, None);
+    store.set_tracked_state(id, AgentState::Running);
+
+    assert_eq!(store.agent(id).unwrap().state, AgentState::Running);
+}
+
+/// Without a limit shown, a tracked state is any other state write.
+#[test]
+fn tracked_states_land_without_a_limit() {
+    let mut store = AgentStore::new();
+    let id = store.create("/tmp/a", CreateOptions::default());
+    // Recorded but not shown: a panel agent's limit lands before its Error.
+    store.set_session_limit(id, Some(limit()));
+
+    store.set_tracked_state(id, AgentState::Running);
+
+    assert_eq!(store.agent(id).unwrap().state, AgentState::Running);
+}
+
+/// A permission the wrap-up asks for shows over the limit, and the limit
+/// is back once it is answered (#377 review).
+#[test]
+fn a_permission_prompt_shows_over_a_limit_and_gives_way_back() {
+    let mut store = AgentStore::new();
+    let id = store.create("/tmp/a", CreateOptions::default());
+    store.set_session_limit(id, Some(limit()));
+    store.set_state(id, AgentState::Error);
+
+    store.set_tracked_state(id, AgentState::Input);
+    store.set_awaiting_reason(id, Some("Claude needs your permission".to_owned()));
+    let agent = store.agent(id).unwrap();
+    assert_eq!(agent.state, AgentState::Input);
+    assert_eq!(agent.active_session_limit(),
+               None,
+               "the prompt takes priority");
+
+    store.set_tracked_state(id, AgentState::Running);
+    let agent = store.agent(id).unwrap();
+    assert_eq!(agent.state, AgentState::Error);
+    assert_eq!(agent.active_session_limit(), Some(&limit()));
+    assert_eq!(agent.awaiting_reason, None);
+}

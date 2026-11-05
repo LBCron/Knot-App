@@ -8,6 +8,7 @@
 pub(super) mod appearance;
 pub(super) mod autopilot;
 pub(super) mod coding;
+pub(super) mod coding_adapter;
 pub(super) mod general;
 pub(super) mod keyboard;
 pub(super) mod mcp;

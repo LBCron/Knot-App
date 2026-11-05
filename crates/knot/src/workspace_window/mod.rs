@@ -18,6 +18,7 @@ mod bench_popover;
 mod changes_counts;
 mod changes_tab;
 mod chrome;
+mod codex_usage_refresh;
 mod creation;
 #[cfg(test)]
 mod creation_tests;
@@ -52,6 +53,7 @@ mod repaint;
 mod restart_tests;
 #[cfg(test)]
 mod send_prompt_tests;
+mod session_limits;
 mod sessions;
 mod shortcuts;
 #[cfg(test)]
