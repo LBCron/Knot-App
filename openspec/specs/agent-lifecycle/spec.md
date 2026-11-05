@@ -655,3 +655,20 @@ A session that fell back to a fresh one is registered as a fresh session is.
 - **WHEN** an agent whose first registration turn failed ("Not logged in") is
   resumed after a restart
 - **THEN** it is registered, by its connection or by the one-line request
+
+### Requirement: A working directory lasts until restart
+
+An agent's working directory SHALL be kept only while Knot runs and SHALL be
+cleared whenever the agent restarts, with or without its conversation, or is
+deactivated, since its next session starts in its folder again.
+
+#### Scenario: Restart clears it
+
+- **WHEN** an agent with a working directory set is restarted
+- **THEN** it has no working directory, and its git is read from its folder
+
+#### Scenario: Deactivating clears it
+
+- **WHEN** an agent with a working directory set is deactivated and later
+  activated again
+- **THEN** it has no working directory, and its git is read from its folder
