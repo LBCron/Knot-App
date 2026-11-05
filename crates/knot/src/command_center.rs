@@ -42,6 +42,9 @@ pub(crate) struct CommandCenterWindow {
     /// agents, so it is the worst place to run `git` where the card is
     /// drawn - which is what it did.
     diff_stats:           DiffStatsCache,
+    /// The folder each card's stat was read from, so an agent whose folder
+    /// changes drops the old tree's stat at once (#25).
+    read_folders:         crate::read_folders::ReadFolders,
     /// The `AgentStore::revision` this window last drew. A card's status
     /// text and state are written where no notify reaches - the MCP server's
     /// thread, the hooks - so the store poll compares against this (#17).
@@ -71,6 +74,7 @@ impl CommandCenterWindow {
                                                          dashboard_sort:
                                                              dashboard::DashboardSort::default(),
                                                          diff_stats: DiffStatsCache::default(),
+                                                         read_folders: Default::default(),
                                                          drawn_store_revision: 0 }
                                });
                   cx.new(|cx| Root::new(view, window, cx))
@@ -107,10 +111,13 @@ impl CommandCenterWindow {
             store.agents()
                  .iter()
                  .filter(|agent| !agent.is_companion)
-                 .map(|agent| (agent.id, agent.folder.clone()))
+                 .map(|agent| (agent.id, agent.effective_folder().to_owned()))
                  .collect::<Vec<_>>()
         };
         for (id, folder) in folders {
+            if self.read_folders.moved(id, &folder) {
+                self.diff_stats.forget(&id);
+            }
             let Some(writer) = self.diff_stats
                                    .claim_refresh(id, crate::diff_stats::MAX_AGE)
             else {

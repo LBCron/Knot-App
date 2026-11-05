@@ -154,6 +154,35 @@ pub(crate) fn diff_stats_row(stats: &knot_git::DiffStats, muted: gpui_kit::Hsla,
                            .child(div().ml_1().child(format!("{files})"))))
 }
 
+/// The status dot's colour: [`state_color`], except that an agent stopped by
+/// its session's usage limit gets the palette's stronger `session_limit` red
+/// rather than `error`'s, which reads as peach on dark (#369). `limit` is
+/// [`knot_agents::Agent::active_session_limit`].
+pub(crate) fn status_color(state: knot_agents::AgentState,
+                           limit: Option<&knot_agents::SessionLimit>, palette: &StatusPalette)
+                           -> gpui_kit::Hsla {
+    match (state, limit) {
+        (knot_agents::AgentState::Error, Some(_)) => rgb(palette.session_limit).into(),
+        _ => state_color(state, palette),
+    }
+}
+
+/// The "Session limit" label as a badge: bold white text on the palette's
+/// `session_limit_fill` (#369). A badge rather than red text, because no
+/// saturated red reaches text contrast on every dark surface, while white on
+/// that fill does.
+pub(crate) fn session_limit_badge(text: impl Into<gpui_kit::SharedString>,
+                                  palette: &StatusPalette)
+                                  -> gpui_kit::Div {
+    use gpui_kit::{ParentElement, Styled};
+    gpui_kit::div().px_1p5()
+                   .rounded_md()
+                   .bg(rgb(palette.session_limit_fill))
+                   .text_color(gpui_kit::white())
+                   .font_weight(gpui_kit::FontWeight::BOLD)
+                   .child(text.into())
+}
+
 /// Status-dot color for the agent's automatic state. Diverges from the
 /// Swift reference (which uses red for both input and error) by giving
 /// "awaiting input" its own blue, since it isn't a failure state.
@@ -471,12 +500,12 @@ pub(crate) fn unread_counts_snapshot(messages: &knot_messaging::MessageStore, ag
              .collect()
 }
 
+/// A terminal agent's output tracker reporting a state. Through
+/// `set_tracked_state`, so output printed after a usage limit - the
+/// wrap-up, or the notice itself - does not lift it (#36).
 pub(crate) fn apply_terminal_status(store: &Arc<Mutex<knot_agents::AgentStore>>, agent_id: Uuid,
                                     state: knot_agents::AgentState) {
-    {
-        let mut store = store.lock();
-        store.set_state(agent_id, state);
-    }
+    store.lock().set_tracked_state(agent_id, state);
 }
 
 /// What the idle-time delivery nudge needs to know about one agent, per

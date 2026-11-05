@@ -63,10 +63,29 @@ Each agent connects on a URL that names it (`…/mcp?agent=<id>`), which Knot pl
 | Tool | Purpose |
 | --- | --- |
 | `set-status` | Set the agent's human-readable status text; an empty string clears it, separate from the automatic state. |
+| `set-working-directory` | Tell Knot which git working tree the agent is working in (a worktree's root), so the git panel, the header's diff stat and the dashboard cards show that tree instead of the agent's folder. An empty path, or the agent's own folder, goes back to the folder; a restart or deactivation clears it. The agent's session keeps running where it started. |
 | `display-markdown` | Show a Markdown file in the calling agent's panel, optionally expanded. |
 | `view-mermaid` | Show a Mermaid diagram in the calling agent's panel, optionally titled. |
 | `show-checklist` | Show a checklist of questions and checkbox items in the calling agent's panel. The user answers in place and presses Send to deliver the answers. Calling it again keeps answers for unchanged items. |
 | `get-checklist` | Read the checklist as the user has left it: ticks, answers, and whether it was sent. |
+
+#### Getting back to an earlier file
+
+When an agent shows a new Markdown file over the one you were reading, the
+earlier one is not lost. The files button in the Markdown section's header lists
+the files the agent has shown before, most recent first; choose one to read it
+again. The agent's context menu has the same list under **Markdown Files**.
+
+#### Approving and reviewing a Markdown file
+
+A Markdown file shown with `display-markdown` offers **Approve** and **Review** in
+its header. Approve sends the agent `Approved: <file>`, naming the file (relative to
+the agent's folder when it is inside it), so the agent knows exactly what was
+approved even if something else is waiting. Review starts a reply in the composer
+that names the file; type your comments under it and press **Submit Review**, or,
+for an agent in the panel, press **Approve** instead to approve with those comments:
+the agent receives `Approved: <file>, with these review comments:` followed by
+them.
 
 #### Checklists
 
@@ -138,6 +157,8 @@ A commit is rejected, leaving any previous graph intact, when a dependency names
 | `blocked` | A dependency failed; it stays blocked until a new plan changes its dependencies. |
 
 On commit, a task with no dependencies is `ready` and every other task is `pending`. A `pending` task becomes `ready` as soon as all its dependencies are `done`. `dispatch-task` delivers a ready task's goal to its assignee under the messaging rules and marks it dispatched; it is refused, leaving the task ready, when the caller has no committed graph, the task is not ready, no candidate resolves for a tag assignee, or messaging rejects the delivery, and a refusal names the dependencies that are not yet done. `complete-task` reports a task done or failed and returns which tasks became ready and which became blocked. `task-status` lists the graph, and is an empty list rather than an error before anything is planned.
+
+A task can also carry `resetContext: true`, for a step that should start clean rather than in the conversation the assignee's last step left behind. Dispatching it delivers the goal as usual, then restarts the assignee on a new conversation as soon as it is not working or awaiting input - a step still under way is finished first, never cut short. The goal waits in the assignee's inbox through the restart, and the assignee is prompted to read it only afterwards. An agent cannot dispatch such a task to itself, since the restart would end its own turn, nor to an agent still holding another dispatched task that has not been reported done or failed - an agent idle while it waits on a reply has already read that task, and a new conversation would lose it. A restart also clears the working directory an agent set for itself, so a plan whose steps work in a worktree should name that worktree in each such task's goal.
 
 Committing a graph while one exists preserves the state of tasks present in both and never cancels, recalls, or duplicates a dispatched task. Committing also shows the plan in the owning agent's panel as a diagram of tasks and dependencies, with each task's current state.
 

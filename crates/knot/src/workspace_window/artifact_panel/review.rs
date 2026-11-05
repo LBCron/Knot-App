@@ -11,6 +11,7 @@
 //! for a Panel-mode agent, keystrokes for a Terminal-mode one - so the reply
 //! is recorded and queued like any other.
 
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use gpui_kit::AppContext;
@@ -35,6 +36,14 @@ pub(in crate::workspace_window) enum ReviewState {
     Submitted,
 }
 
+/// A file as the review controls name it: its file name, or the whole path
+/// for one that has none.
+pub(in crate::workspace_window) fn file_label(file: &Path) -> String {
+    file.file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_else(|| file.to_string_lossy().into_owned())
+}
+
 /// The reply a Review starts, naming the file so the agent knows which of
 /// its artifacts the comments below are about.
 ///
@@ -42,6 +51,49 @@ pub(in crate::workspace_window) enum ReviewState {
 /// the agent's instructions are in English whatever the user's locale.
 pub(in crate::workspace_window) fn review_preamble(file_name: &str) -> String {
     format!("While reviewing {file_name}, user made the following comments:\n")
+}
+
+/// The go-ahead for `file`, naming it so the agent knows which of its
+/// artifacts was approved - a bare "approved" is ambiguous whenever anything
+/// else is pending (#30) - with the review comments the user approved it
+/// with, when there are any.
+///
+/// Sent to the agent, so not localized, like [`review_preamble`].
+pub(in crate::workspace_window) fn approval(file: &str, comments: Option<&str>) -> String {
+    match comments.map(str::trim)
+                  .filter(|comments| !comments.is_empty())
+    {
+        Some(comments) => format!("Approved: {file}, with these review comments:\n{comments}"),
+        None => format!("Approved: {file}"),
+    }
+}
+
+/// `file` as an approval names it: relative to the agent's `folder` when it
+/// lies inside it, as the agent would refer to it, and in full otherwise.
+pub(in crate::workspace_window) fn approval_target(file: &Path, folder: &str) -> String {
+    let folder = match (folder.strip_prefix("~/"), std::env::home_dir()) {
+        (Some(rest), Some(home)) => home.join(rest),
+        _ => PathBuf::from(folder),
+    };
+    file.strip_prefix(&folder)
+        .ok()
+        .filter(|relative| !relative.as_os_str().is_empty())
+        .unwrap_or(file)
+        .to_string_lossy()
+        .into_owned()
+}
+
+/// Splits a composer holding a started review into the draft the user had
+/// before it, which stays in the composer, and the comments they wrote after
+/// the review's `preamble`. Without the preamble, the whole text is the
+/// comments.
+pub(in crate::workspace_window) fn split_review(text: &str, preamble: &str) -> (String, String) {
+    match text.rfind(preamble) {
+        Some(at) => {
+            (text[..at].trim_end().to_owned(), text[at + preamble.len()..].trim().to_owned())
+        }
+        None => (String::new(), text.trim().to_owned()),
+    }
 }
 
 /// The markdown font size one step from `current`, or `None` at the bound.
@@ -77,16 +129,40 @@ impl WorkspaceWindow {
             .is_some_and(|agent| agent.view_mode == knot_core::ViewMode::Panel)
     }
 
-    /// Sends the go-ahead for `id`'s file, as one submitted message.
-    pub(in crate::workspace_window) fn approve_markdown(&mut self, id: Uuid,
+    /// Sends the go-ahead for `id`'s `file`, naming it, as one submitted
+    /// message (#30).
+    ///
+    /// Mid-review, a Panel-mode agent's approval takes the comments the user
+    /// wrote after the review's preamble with it, and the composer keeps any
+    /// draft that was there before the review began. A Terminal-mode agent
+    /// is not offered Approve mid-review: what was typed at its prompt
+    /// cannot be read back to send with it.
+    pub(in crate::workspace_window) fn approve_markdown(&mut self, id: Uuid, file: &Path,
+                                                        window: &mut Window,
                                                         cx: &mut Context<Self>) {
+        let folder = self.store
+                         .lock()
+                         .agent(id)
+                         .map(|agent| agent.folder.clone())
+                         .unwrap_or_default();
+        let target = approval_target(file, &folder);
         if self.is_panel_agent(id) {
+            let comments = (self.markdown_review(id) == ReviewState::Reviewing).then(|| {
+                               let preamble = review_preamble(&file_label(file));
+                               let input = self.panel_prompt_input(id, window, cx);
+                               cx.update_entity(&input, |state, cx| {
+                                     let (draft, comments) =
+                                         split_review(&state.value(), &preamble);
+                                     state.set_value(draft, window, cx);
+                                     comments
+                                 })
+                           });
             self.deliver_panel_prompt(id,
-                                      consts::ARTIFACT_APPROVE_PROMPT.to_string(),
+                                      approval(&target, comments.as_deref()),
                                       PromptOrigin::User);
         }
         else {
-            self.send_terminal_command(id, consts::ARTIFACT_APPROVE_PROMPT, cx);
+            self.send_terminal_command(id, &approval(&target, None), cx);
         }
         self.set_markdown_review(id, ReviewState::Submitted);
         cx.notify();

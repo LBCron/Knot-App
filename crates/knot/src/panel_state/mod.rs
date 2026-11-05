@@ -19,6 +19,7 @@ mod message;
 mod state;
 mod summary;
 mod times;
+mod turn_progress;
 
 pub use message::PanelMessage;
 pub use message::ShellCard;

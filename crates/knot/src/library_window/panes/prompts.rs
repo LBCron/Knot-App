@@ -21,9 +21,11 @@ use gpui_kit::component::WindowExt;
 use gpui_kit::div;
 use gpui_kit::px;
 use knot_core::{Prompt, PromptReferences, StartupPrompt};
+use knot_library::ContributionKind;
 use uuid::Uuid;
 
 use super::super::prompt_editor::open_prompt_editor;
+use super::super::submit::{Submission, open_submit_dialog};
 use crate::library_window::LibraryWindow;
 
 /// A prompt's text as one line for its row: line breaks become spaces, and
@@ -73,6 +75,23 @@ impl LibraryWindow {
                        let prompt = prompt.clone();
                        move |_, _, app| open_prompt_editor(Some(prompt.clone()), app)
                    });
+        let submit =
+            crate::controls::icon_button(("prompt-submit", index),
+                                         "icons/git-pull-request-arrow.svg",
+                                         knot_core::l10n::t("library.submit.prompt_tooltip"),
+                                         false).debug_selector(move || {
+                                                   format!("prompt-submit-{index}")
+                                               })
+                                               .on_click({
+                                                   let submission = Submission { kind: ContributionKind::Prompt,
+                                                                                 id:   prompt.id,
+                                                                                 name: prompt.name.clone(),
+                                                                                 body: prompt.text.clone(),
+                                                                                 description: prompt.description.clone(), };
+                                                   move |_, window, app| {
+                                                       open_submit_dialog(submission.clone(), window, app)
+                                                   }
+                                               });
         let delete = crate::controls::icon_button(("prompt-delete", index),
                                                   "icons/trash.svg",
                                                   knot_core::l10n::t("settings.prompts.delete"),
@@ -97,7 +116,11 @@ impl LibraryWindow {
                                .child(div().text_sm()
                                            .text_color(cx.theme().muted_foreground)
                                            .child(preview)))
-                .child(h_flex().flex_shrink_0().gap_1().child(edit).child(delete))
+                .child(h_flex().flex_shrink_0()
+                               .gap_1()
+                               .child(submit)
+                               .child(edit)
+                               .child(delete))
     }
 
     pub(crate) fn render_prompts(&self, cx: &mut Context<Self>) -> impl IntoElement {

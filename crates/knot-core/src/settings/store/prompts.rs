@@ -82,6 +82,18 @@ impl Settings {
         self.persist_prompts()
     }
 
+    /// Set a prompt's description, or clear it with a blank one. An unknown
+    /// id changes nothing.
+    pub fn set_prompt_description(&mut self, id: Uuid, description: &str) -> Result<()> {
+        let Some(prompt) = self.prompts.iter_mut().find(|p| p.id == id)
+        else {
+            return Ok(());
+        };
+        let description = description.trim();
+        prompt.description = (!description.is_empty()).then(|| description.to_owned());
+        self.persist_prompts()
+    }
+
     /// Remove a prompt from the library. References to it are kept; see the
     /// module doc. An unknown id changes nothing and writes nothing.
     pub fn remove_prompt(&mut self, id: Uuid) -> Result<()> {

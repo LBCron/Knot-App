@@ -531,3 +531,37 @@ reflects the change without waiting out the normal staleness interval.
   showing diff stats
 - **THEN** the card's stats are refreshed rather than continuing to show the
   pre-commit counts until they age out
+
+### Requirement: Git state follows the agent's folder
+
+The git panel's status and diffs, the header's diff stat and the dashboard
+and Command Center cards' diff stats SHALL be read from the folder the agent's
+git is read from now. When that folder changes, what was read from the old
+one SHALL be dropped on the next frame rather than shown until it ages out,
+and an open panel's watch SHALL move to the new folder.
+
+#### Scenario: The folder is edited
+
+- **WHEN** an agent whose header shows its folder's diff stat is edited to a
+  different folder
+- **THEN** the old folder's stat is gone on the next frame, and the new
+  folder's stat replaces it once read
+
+#### Scenario: The panel is open when the folder changes
+
+- **WHEN** an agent's git panel is open and its folder changes
+- **THEN** the panel's status is read from the new folder, and changes made in
+  the new folder, not the old one, refresh it
+
+### Requirement: Git is read from the agent's working directory
+
+The git panel, the header's diff stat and the dashboard and Command Center
+cards' diff stats SHALL be read from the agent's working directory when it has
+one (`set-working-directory`), and from its folder otherwise.
+
+#### Scenario: An agent moves into a worktree
+
+- **WHEN** an agent whose git panel is open sets its working directory to a
+  worktree
+- **THEN** on the next frame the panel and the header show that worktree's
+  status and diff stat, not its folder's

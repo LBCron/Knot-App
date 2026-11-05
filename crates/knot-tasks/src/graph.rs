@@ -21,11 +21,13 @@ use crate::task::{Assignee, Outcome, Task, TaskId, TaskSpec, TaskState};
 /// What the gate says about a task a caller wants to dispatch.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Dispatchable {
-    pub id:       TaskId,
-    pub goal:     String,
+    pub id:            TaskId,
+    pub goal:          String,
     /// `None` when the plan recorded the work without deciding who does it.
     /// The caller has to choose before it can deliver anything.
-    pub assignee: Option<Assignee>,
+    pub assignee:      Option<Assignee>,
+    /// See [`crate::TaskSpec::fresh_context`].
+    pub fresh_context: bool,
 }
 
 /// What completing a task changed elsewhere in the plan.
@@ -129,9 +131,10 @@ impl TaskGraph {
         let task = self.task(id)
                        .ok_or_else(|| TaskError::NotFound(id.clone()))?;
         match task.state {
-            TaskState::Ready => Ok(Dispatchable { id:       task.id.clone(),
-                                                  goal:     task.goal.clone(),
-                                                  assignee: task.assignee.clone(), }),
+            TaskState::Ready => Ok(Dispatchable { id:            task.id.clone(),
+                                                  goal:          task.goal.clone(),
+                                                  assignee:      task.assignee.clone(),
+                                                  fresh_context: task.fresh_context, }),
             TaskState::Pending => Err(TaskError::DependenciesUnmet { task:  id.clone(),
                                                                      unmet: self.unmet(task), }),
             other => Err(TaskError::NotReady { task:  id.clone(),

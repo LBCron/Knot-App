@@ -80,27 +80,106 @@ pub struct StartupRequest {
 /// Connects `request`'s adapter and drives `slot` through the connection
 /// lifecycle, calling `on_session_id` with the opened session id so the
 /// caller can persist it for a later resume.
+///
+/// Gives way to a retired slot at every step (#382): retiring it while the
+/// adapter is starting drops the half-made connection - and the adapter
+/// with it - and a retire that lands after the connection is made stops
+/// it. Either way nothing is published and `on_session_id` is not called,
+/// so a torn-down attempt can neither leave an adapter running beside the
+/// next one nor write its session id over the one that replaced it.
 pub async fn connect_into(slot: &Arc<Mutex<PanelSessionSlot>>, request: ConnectRequest<'_>,
                           progress: &ConnectProgress, on_session_id: impl FnOnce(&str)) {
+    // Taken under the lock, so an attempt that starts after its slot was
+    // retired - or a second task handed the same slot - does nothing.
+    let Some(retired) = slot.lock().take_retire_signal()
+    else {
+        return;
+    };
+    let prepared = tokio::select! {
+        // Fires when the `Connecting` variant holding the sender is
+        // replaced. Only a retire can do that while this select runs: the
+        // attempt's own outcome is published after it.
+        _ = retired => return,
+        prepared = prepare(request, progress) => prepared,
+    };
+    let Prepared { handle,
+                   registration_prompt, } = match prepared {
+        Ok(prepared) => prepared,
+        Err(error) => {
+            // Retired in the meantime: a failure nobody is waiting to see.
+            let _ = PanelSessionSlot::publish(slot, PanelSessionSlot::Failed(error));
+            return;
+        }
+    };
+    // Checked again here, after the select: a retire that landed between
+    // the connection completing and this line has no signal left to fire.
+    // A retire after the check is caught by `publish` below; the id is only
+    // a hint for the next launch, which writes its own.
+    if !slot.lock().is_connecting() {
+        handle.stop().await;
+        return;
+    }
+    on_session_id(handle.session_id());
+    let session = handle.session();
+    let recorder = handle.recorder();
+    // Publish the handle *before* sending the registration prompt.
+    // `session/prompt` resolves only when the whole turn ends, and an
+    // agent that asks permission during that turn (Gemini does, for its
+    // first Knot MCP tool call) can only be answered through a `Ready`
+    // slot - so awaiting the turn here first is a circular wait: the
+    // turn needs a permission answer, the answer needs the slot, the
+    // slot needs the turn. The registration prompt is recorded first so
+    // the panel opens on the turn already in flight rather than blank.
+    if let Some(prompt) = &registration_prompt {
+        handle.record_user_message(prompt.clone());
+    }
+    if let Err(unpublished) = PanelSessionSlot::publish(slot, PanelSessionSlot::Ready(handle)) {
+        if let PanelSessionSlot::Ready(handle) = unpublished {
+            handle.stop().await;
+        }
+        return;
+    }
+
+    if let Some(prompt) = registration_prompt
+       && let Err(error) = session.prompt(&prompt).await
+    {
+        // Into the conversation, not just the console: the registration
+        // turn is the first thing the panel shows, and an agent that
+        // refuses it (an exhausted daily quota, say) otherwise leaves the
+        // panel sitting on a prompt that never answers.
+        recorder.error(knot_core::l10n::t_with("panel.error_first_turn",
+                                               &[("error", &error.to_string())]));
+        eprintln!("failed to send panel registration prompt: {error}");
+    }
+}
+
+/// A connected session, set up and ready to publish, and the first turn to
+/// send on it.
+struct Prepared {
+    handle:              Box<PanelSessionHandle>,
+    registration_prompt: Option<String>,
+}
+
+/// Everything `connect_into` does before the slot goes live: start the
+/// adapter, replay the session setup, expand the startup prompt.
+///
+/// Its own future so that dropping it is the cancellation: the adapter
+/// subprocess belongs to the transport this future owns until it returns,
+/// and the transport kills it on drop.
+async fn prepare(request: ConnectRequest<'_>, progress: &ConnectProgress)
+                 -> std::result::Result<Prepared, String> {
     let target = SessionTarget { cwd:              request.cwd,
                                  prior_session_id: request.prior_session_id,
                                  mcp_url:          request.mcp_url,
                                  meta:             request.session_meta.as_ref(),
                                  env:              &request.env,
                                  args:             &request.args, };
-    let mut handle = match PanelSessionHandle::start(request.config,
-                                                     target,
-                                                     progress,
-                                                     request.subagents,
-                                                     request.times).await
-    {
-        Ok(handle) => handle,
-        Err(error) => {
-            *slot.lock() = PanelSessionSlot::Failed(error.to_string());
-            return;
-        }
-    };
-    on_session_id(handle.session_id());
+    let mut handle = PanelSessionHandle::start(request.config,
+                                               target,
+                                               progress,
+                                               request.subagents,
+                                               request.times).await
+                                                             .map_err(|error| error.to_string())?;
     // Decided on what happened, not on what was asked for: a prior session
     // that could not be loaded left a fresh one that nothing has registered.
     let resumed = handle.session().resumed();
@@ -143,14 +222,6 @@ pub async fn connect_into(slot: &Arc<Mutex<PanelSessionSlot>>, request: ConnectR
         handle.state().lock().config_options = options;
     }
 
-    // Publish the handle *before* sending the registration prompt.
-    // `session/prompt` resolves only when the whole turn ends, and an
-    // agent that asks permission during that turn (Gemini does, for its
-    // first Knot MCP tool call) can only be answered through a `Ready`
-    // slot - so awaiting the turn here first is a circular wait: the
-    // turn needs a permission answer, the answer needs the slot, the
-    // slot needs the turn. The registration prompt is recorded first so
-    // the panel opens on the turn already in flight rather than blank.
     // Expanded before `Ready`, so the window only ever sees the handle with
     // its startup prompt already in place, and queues it behind a
     // registration turn that `record_user_message` has already marked
@@ -158,24 +229,8 @@ pub async fn connect_into(slot: &Arc<Mutex<PanelSessionSlot>>, request: ConnectR
     if let Some(startup) = startup_prompt {
         handle.startup_prompt = expand_startup(startup).await;
     }
-    let session = handle.session();
-    let recorder = handle.recorder();
-    if let Some(prompt) = &registration_prompt {
-        handle.record_user_message(prompt.clone());
-    }
-    *slot.lock() = PanelSessionSlot::Ready(Box::new(handle));
-
-    if let Some(prompt) = registration_prompt
-       && let Err(error) = session.prompt(&prompt).await
-    {
-        // Into the conversation, not just the console: the registration
-        // turn is the first thing the panel shows, and an agent that
-        // refuses it (an exhausted daily quota, say) otherwise leaves the
-        // panel sitting on a prompt that never answers.
-        recorder.error(knot_core::l10n::t_with("panel.error_first_turn",
-                                               &[("error", &error.to_string())]));
-        eprintln!("failed to send panel registration prompt: {error}");
-    }
+    Ok(Prepared { handle: Box::new(handle),
+                  registration_prompt })
 }
 
 /// `startup`'s text with its variables expanded, reading the branch on a

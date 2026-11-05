@@ -270,12 +270,18 @@ pub const ALL: &[AgentTypeInfo] =
                       hook_activity:       false,
                       subagents:           SubagentReporting::None, }];
 
+/// Claude Code's type id.
+pub const CLAUDE: &str = "claude";
+
 /// The type a new agent gets when nothing else says otherwise.
-pub const DEFAULT: &str = "claude";
+pub const DEFAULT: &str = CLAUDE;
 
 /// The bare-shell type, for the paths that create one deliberately -
 /// a shell companion, or the editor stating what a companion must be.
 pub const SHELL: &str = "shell";
+
+/// OpenAI's Codex CLI: the agent whose usage allowance Knot can read (#291).
+pub const CODEX: &str = "codex";
 
 /// What is known about `id`, or `None` for a type this build does not
 /// recognize - which is a working agent that launches through the terminal

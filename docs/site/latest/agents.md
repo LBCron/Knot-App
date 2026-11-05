@@ -117,6 +117,10 @@ Right-clicking the empty space in the sidebar opens a workspace menu: New Agent,
 Restart All, Close All, Deactivate All, and Broadcast to All Agents…. Every item is shown, with the
 ones that do not apply disabled; New from Bench deploys a saved template.
 
+Drag the sidebar narrower than 160px and it turns compact: each agent is just its avatar, with its
+state dot on the corner. Rest the pointer on an avatar to see the agent's name, its state (such as
+"Awaiting input" and why) and what it says it is doing.
+
 ## Activity status
 
 Each running agent has one status, shown on its sidebar state dot and its dashboard card and used to
@@ -128,7 +132,7 @@ sort the dashboard.
 | Idle | Green | Quiet and waiting. |
 | Awaiting input | Red | Needs you - for example a permission prompt is open. |
 | Error | Red | The session ended with an error. |
-| Session limit | Red | The agent's provider refused the turn: its session or usage limit is reached. The header says when it resets, if the provider said. |
+| Session limit | Bright red, bold badge | The agent's provider refused the turn: its session or usage limit is reached. The dot is a stronger red than Error's, and the header and dashboard card show "Session limit" as a bold white-on-red badge. The header says when it resets, if the provider said. |
 
 Terminal output moves an agent to Working and back to Idle after a short quiet period; typing keeps
 it Working. A permission request moves it to Awaiting input immediately; Return moves it to Working
@@ -136,13 +140,24 @@ and Escape to Idle. A permission answered any other way, such as cancelled by St
 ending, takes the agent out of Awaiting input as soon as it is answered. A shell agent stays Idle
 whatever its output.
 
+A Codex agent also warns before it reaches the limit. When Codex has used 75% or more of its 5-hour or
+weekly allowance, a banner over the agent reads **Approaching usage limit**, says when that window
+resets, and offers **Get more usage**, which opens Codex's usage settings. Dismiss it with the ×; it
+stays dismissed until that window resets. Knot reads these figures from Codex's own session files
+(`~/.codex/sessions`, or under `$CODEX_HOME`) and shows nothing if they are missing. Claude agents
+don't show this yet: their ACP adapter doesn't report usage.
+
 An agent in Awaiting input says why when it knows: hover its state dot, or read the line under its
 dashboard card. A pending permission request shows its title (`permission requested for Bash`); a
 wait Autopilot started says what it read in the agent's last reply (`Autopilot: the last reply asks
 you a question`). The reason goes as soon as the agent leaves Awaiting input. A session that exits non-zero, or
 a panel connection that ends with an error, moves the agent to Error. A panel agent whose turn is
 refused with a session or usage limit ("You've hit your session limit · resets 5:20pm") shows Session
-limit instead, in red, until you send it another prompt. The dashboard's cards add a
+limit instead, in red, until you send it another prompt. A Claude agent in the terminal does the
+same when it prints a usage-limit notice - including "Usage limit reached · wrapping up", when Claude
+lets it finish what it was doing first: it stays Session limit through the wrap-up and after it, until
+you submit another prompt, and Autopilot leaves it alone. A permission the wrap-up asks for still shows
+as Awaiting input, and the agent goes back to Session limit once you answer it. The dashboard's cards add a
 glanceable working/thinking indicator that reflects the same status and animates on each change; the
 sidebar row does not draw it.
 
@@ -153,18 +168,29 @@ stream, each tool call as its own card - with an icon for the tool and, for a fi
 added/removed line diff - and the shell commands you run from the prompt. A completed tool call
 collapses to its header, while failed and running calls stay open and any call can be opened or
 closed by hand. An active turn shows a turn-in-progress indicator as the conversation's last row,
-below any permission prompt.
+below any permission prompt. Beside it, the turn's running time and roughly how much it has written, as
+Claude Code shows them: `42s · ~1.2k tokens`. The time is exact; the token count is an estimate
+from the text the agent has streamed (about four characters to a token), so a turn that spends a
+long time thinking reads low.
 
 A permission request appears inline with its options as buttons, names the tool it is for, and
 blocks further prompts until you answer. A message sent while a response is in progress is queued
-and delivered when the turn ends; a stop control interrupts the active turn. You can switch one
+and delivered when the turn ends; a stop control interrupts the active turn.
+
+A message sent to an agent stopped by its session limit is queued too, and goes on its own when the
+limit resets - "resets 5:20pm (America/Los_Angeles)" is read as the next 5:20 pm in that zone. Its
+row says it is waiting for the session limit and offers **Send now**, which sends it next without
+waiting. If the provider gives no reset time Knot can read, queued messages wait until you choose
+Send now. You can switch one
 agent between the panel and the raw terminal without interrupting its turn or terminal process, and
 each agent remembers the mode you last chose.
 
 Resting the pointer on a link in a response, or in a Markdown pane, shows the address it goes to
 beside the pointer, so you can see where a link leads before you click it.
 
-Point at a message to act on it. A prompt you sent shows a copy button; an agent's response shows
+Point at a message to act on it. A prompt you sent shows a copy button and a save button, which opens
+the prompt editor with that prompt's text so you can name it and keep it in your prompt library; an
+agent's response shows
 its controls - Copy, Reply (quotes it into the composer), Scroll to your message, and Scroll to
 top. The latest response keeps its controls in view, so you can copy or reply to the answer you
 just got without hunting for them; earlier ones show theirs only while you point at them, and

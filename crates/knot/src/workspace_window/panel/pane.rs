@@ -188,8 +188,13 @@ impl WorkspaceWindow {
         };
         let slot_guard = slot.lock();
         match &*slot_guard {
-            panel_session::PanelSessionSlot::Connecting(progress) => {
-                let step = progress.lock().label();
+            // Never in the map - retiring takes a slot out of it - so drawn
+            // as the empty pane an agent with no slot gets.
+            panel_session::PanelSessionSlot::Retired => div().size_full()
+                                                             .track_focus(&composer_focus)
+                                                             .into_any_element(),
+            panel_session::PanelSessionSlot::Connecting(connecting) => {
+                let step = connecting.progress().lock().label();
                 v_flex().size_full()
                         .track_focus(&composer_focus)
                         .items_center()

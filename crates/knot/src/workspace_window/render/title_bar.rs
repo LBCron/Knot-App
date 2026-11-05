@@ -19,7 +19,6 @@ use gpui_kit::div;
 use gpui_kit::prelude::FluentBuilder;
 use gpui_kit::px;
 
-use crate::app_state::state_color;
 use crate::app_support::single_line;
 use crate::dashboard;
 use crate::workspace_window::WorkspaceWindow;
@@ -137,6 +136,12 @@ impl WorkspaceWindow {
                     let autopilot = crate::settings_global::read(cx).autopilot_enabled
                                     && selected_header.as_ref()
                                                       .is_some_and(|header| !header.autopilot_off);
+                    // Only while the agent is stopped by it: the header carries
+                    // the agent's active limit (#318).
+                    let session_limit =
+                        selected_header.as_ref()
+                                       .and_then(|header| header.session_limit.as_ref());
+                    let palette = crate::status_palette::status_palette(cx);
                     let status =
                         v_flex().items_end()
                                 .gap_0p5()
@@ -158,16 +163,20 @@ impl WorkspaceWindow {
                                                .child(div().w(px(10.))
                                                            .h(px(10.))
                                                            .rounded_full()
-                                                           .bg(state_color(*state, crate::status_palette::status_palette(cx))))
-                                               .child(div().font_family(title_font_name.clone())
-                                                           .text_size(title_font_size)
-                                                           .text_color(cx.theme().muted_foreground)
-                                                           .child(crate::app_state::status_label(
-                                                               *state,
-                                                               selected_header.as_ref()
-                                                                              .and_then(|header| header.session_limit.as_ref()),
-                                                               true,
-                                                           ))))
+                                                           .bg(crate::app_state::status_color(*state, session_limit, palette)))
+                                               .child({
+                                                   let label = crate::app_state::status_label(*state, session_limit, true);
+                                                   // A session limit is a badge, bold and red (#369);
+                                                   // every other state stays quiet text.
+                                                   if session_limit.is_some() {
+                                                       crate::app_state::session_limit_badge(label, palette)
+                                                   }
+                                                   else {
+                                                       div().text_color(cx.theme().muted_foreground).child(label)
+                                                   }
+                                                   .font_family(title_font_name.clone())
+                                                   .text_size(title_font_size)
+                                               }))
                                 .child(match git_stats {
                                            Some(Some(stats)) => {
                                                // The stat row is already the

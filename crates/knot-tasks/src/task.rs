@@ -130,18 +130,22 @@ pub enum Outcome {
 /// What a caller submits: a task before the graph has decided its state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskSpec {
-    pub id:         TaskId,
-    pub goal:       String,
-    pub assignee:   Option<Assignee>,
-    pub depends_on: Vec<TaskId>,
+    pub id:            TaskId,
+    pub goal:          String,
+    pub assignee:      Option<Assignee>,
+    pub depends_on:    Vec<TaskId>,
+    /// Start the assignee on a fresh conversation for this task (#331), so
+    /// it carries nothing over from the step before.
+    pub fresh_context: bool,
 }
 
 impl TaskSpec {
     pub fn new(id: impl Into<TaskId>, goal: impl Into<String>) -> Self {
-        Self { id:         id.into(),
-               goal:       goal.into(),
-               assignee:   None,
-               depends_on: Vec::new(), }
+        Self { id:            id.into(),
+               goal:          goal.into(),
+               assignee:      None,
+               depends_on:    Vec::new(),
+               fresh_context: false, }
     }
 
     pub fn assigned_to(mut self, agent: Uuid) -> Self {
@@ -151,6 +155,11 @@ impl TaskSpec {
 
     pub fn for_capabilities(mut self, capabilities: Capabilities) -> Self {
         self.assignee = Some(Assignee::Capabilities(capabilities));
+        self
+    }
+
+    pub fn with_fresh_context(mut self) -> Self {
+        self.fresh_context = true;
         self
     }
 
@@ -172,6 +181,8 @@ pub struct Task {
     /// `assignee`: a capability assignee resolves to a different agent each
     /// time it is dispatched, and the plan should record which one it was.
     pub dispatched_to: Option<Uuid>,
+    /// See [`TaskSpec::fresh_context`].
+    pub fresh_context: bool,
 }
 
 impl Task {
@@ -187,7 +198,8 @@ impl Task {
                assignee: spec.assignee,
                depends_on: spec.depends_on,
                state,
-               dispatched_to: None }
+               dispatched_to: None,
+               fresh_context: spec.fresh_context }
     }
 }
 

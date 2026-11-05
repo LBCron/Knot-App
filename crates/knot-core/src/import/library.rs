@@ -99,7 +99,12 @@ pub fn import_items(settings: &SharedSettings, items: &[(IndexItem, Result<Strin
                         ItemKind::Prompt => settings.insert_prompt(Prompt { id,
                                                                             name: item.title
                                                                                       .clone(),
-                                                                            text: body.clone() }),
+                                                                            text: body.clone(),
+                                                                            description: Some(item.description
+                                                                                                  .clone())
+                                                                                .filter(|d| {
+                                                                                    !d.trim().is_empty()
+                                                                                }) }),
                         ItemKind::Other(_) => continue,
                     };
                     match inserted {

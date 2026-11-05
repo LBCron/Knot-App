@@ -34,6 +34,9 @@ pub(crate) use kind::IssueKind;
 pub(crate) use logs::{Attachment, LogKind};
 #[cfg(test)]
 pub(crate) use report::{BugReport, ReportServices};
+// The library's submit dialog (#43) flags the same values a bug report
+// removes before publishing.
+pub(crate) use scrub::{home_dir, scrub};
 #[cfg(test)]
 pub(crate) use submit::{Outcome, Report};
 pub(crate) use window::register_report_issue_action;

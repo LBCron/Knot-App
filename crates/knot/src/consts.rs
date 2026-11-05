@@ -86,10 +86,6 @@ pub(crate) const ARTIFACT_PANEL_DEFAULT_SPLIT: f32 = 0.5;
 pub(crate) const ARTIFACT_PANEL_MIN_SPLIT: f32 = 0.15;
 pub(crate) const ARTIFACT_PANEL_MAX_SPLIT: f32 = 0.85;
 
-/// The message the markdown section's Approve sends: the go-ahead, verbatim
-/// from `MarkdownPanelView`. Sent to the agent, so not localized.
-pub(crate) const ARTIFACT_APPROVE_PROMPT: &str = "approved let's do it";
-
 /// The bounds the markdown section's font size controls step within, from
 /// `MarkdownPanelView`'s `A` buttons.
 pub(crate) const MARKDOWN_FONT_SIZE_MIN: i32 = 10;
@@ -251,7 +247,11 @@ pub(crate) const DARK_STATUS_PALETTE: crate::status_palette::StatusPalette =
                                            stopped:             0x9CA3AF,
                                            card_muted:          0x9A9A9A,
                                            pull_request_behind: 0xEAB308,
-                                           pull_request_merged: 0xA855F7, };
+                                           pull_request_merged: 0xA855F7,
+                                           // Red 500 and 600: saturated where
+                                           // `error`'s red 400 is not (#369).
+                                           session_limit:       0xEF4444,
+                                           session_limit_fill:  0xDC2626, };
 
 /// The status colours on a light surface: the same hues, darker.
 pub(crate) const LIGHT_STATUS_PALETTE: crate::status_palette::StatusPalette =
@@ -262,7 +262,9 @@ pub(crate) const LIGHT_STATUS_PALETTE: crate::status_palette::StatusPalette =
                                            stopped:             0x4B5563,
                                            card_muted:          0x5F6368,
                                            pull_request_behind: 0xA16207,
-                                           pull_request_merged: 0x7E22CE, };
+                                           pull_request_merged: 0x7E22CE,
+                                           session_limit:       0xDC2626,
+                                           session_limit_fill:  0xDC2626, };
 
 /// How much of a pull request row's state colour reaches its background.
 ///
@@ -455,3 +457,37 @@ pub(crate) const LINK_TOOLTIP_OFFSET: f32 = 14.;
 pub(crate) const LINK_TOOLTIP_MAX_WIDTH: f32 = 480.;
 /// The least room a link's URL label keeps from the window's edges.
 pub(crate) const LINK_TOOLTIP_WINDOW_MARGIN: f32 = 8.;
+
+/// How much of a Codex usage window must be used before an agent's pane says
+/// it is approaching the limit (#291). Codex's own CLI warns from here up.
+pub(crate) const CODEX_USAGE_NEAR_LIMIT_PERCENT: f64 = 75.0;
+
+/// How much of the end of a Codex session file is read for its latest usage
+/// snapshot. Snapshots come with every model response, so the newest is near
+/// the end; a long session's file runs to megabytes.
+pub(crate) const CODEX_USAGE_TAIL_BYTES: u64 = 256 * 1024;
+
+/// How often Codex's usage is re-read while a Codex agent is in the window.
+/// A file listing and a tail read, off the main thread.
+pub(crate) const CODEX_USAGE_MAX_AGE: Duration = Duration::from_secs(60);
+
+/// Where Codex's usage can be extended, as its own limit message names it.
+pub(crate) const CODEX_USAGE_URL: &str = "https://chatgpt.com/codex/settings/usage";
+
+/// How long after launch the first background adapter update check runs
+/// (#367): late enough to stay out of startup's way.
+pub(crate) const ADAPTER_UPDATE_FIRST_CHECK_DELAY: Duration = Duration::from_secs(60);
+/// How often adapters are checked for updates after that.
+pub(crate) const ADAPTER_UPDATE_CHECK_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+/// An adapter update notification's tag, before the agent type. Not an
+/// agent id, so a click only brings Knot forward.
+pub(crate) const ADAPTER_UPDATE_NOTIFICATION_TAG_PREFIX: &str = "adapter-update:";
+
+/// Characters to a token, for the working turn's estimate (#35): the usual
+/// rule of thumb for English text and code.
+pub(crate) const CHARS_PER_TOKEN: usize = 4;
+
+/// The longest Knot-Library new-file address handed to the browser (#43).
+/// GitHub refuses a much longer one, so past this the file goes to the
+/// clipboard and the page opens empty.
+pub(crate) const LIBRARY_SUBMIT_URL_MAX: usize = 8000;

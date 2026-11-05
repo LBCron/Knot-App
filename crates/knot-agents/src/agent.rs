@@ -90,41 +90,54 @@ pub struct Agent {
     /// Whether this agent has been activated in this run and so may start.
     /// Never persisted: a `Passive` agent that was running at quit comes
     /// back stopped, or "passive" would decay into "active after first use".
-    pub activated:         bool,
-    pub state:             AgentState,
+    pub activated:               bool,
+    pub state:                   AgentState,
     /// When the agent last went idle, which is when it finished its last
     /// message. `None` until a transition into [`AgentState::Idle`] has
     /// been seen in this run: an agent that has not spoken yet has no last
     /// message, and a restart clears it. Set by
     /// [`crate::AgentStore::set_state`], never by hand.
-    pub idle_since:        Option<SystemTime>,
+    pub idle_since:              Option<SystemTime>,
     /// Why the agent is waiting on the user while its state is
     /// [`AgentState::Input`] - a permission request's title, or what
     /// Autopilot read in its last reply - shown beside "Awaiting input"
     /// (#344). Set with [`crate::AgentStore::set_awaiting_reason`] and
     /// cleared by [`crate::AgentStore::set_state`] as the agent leaves
     /// Input, so it never outlives the wait it explains.
-    pub awaiting_reason:   Option<String>,
+    pub awaiting_reason:         Option<String>,
     /// The usage limit that stopped this agent's session, while its state
     /// is [`AgentState::Error`] because of it (#318). Set with
     /// [`crate::AgentStore::set_session_limit`] and cleared by
     /// [`crate::AgentStore::set_state`] as the agent leaves Error.
-    pub session_limit:     Option<crate::SessionLimit>,
-    pub status_text:       String,
-    pub is_registered:     bool,
-    pub is_pending_start:  bool,
-    pub terminal_title:    String,
-    pub restart_token:     Uuid,
-    pub session_id:        Option<String>,
-    pub resume_session_id: Option<String>,
-    pub fork_session:      bool,
+    pub session_limit:           Option<crate::SessionLimit>,
+    pub status_text:             String,
+    /// Where the agent says it is working, when that is not its folder: a
+    /// worktree it moved into (#25). Set by the `set-working-directory` MCP
+    /// tool through [`crate::AgentStore::set_working_dir`], never saved, and
+    /// cleared by every restart and by deactivation, after which the agent's
+    /// next session starts in its folder again.
+    /// Git is read from [`Agent::effective_folder`]; where the agent's
+    /// session runs does not change.
+    pub working_dir:             Option<String>,
+    /// A task was dispatched to this agent asking for a fresh conversation
+    /// (#331). The window restarts it without its conversation the next
+    /// time it is not working, and holds its inbox nudge until then; see
+    /// [`crate::AgentStore::request_fresh_context`].
+    pub fresh_context_requested: bool,
+    pub is_registered:           bool,
+    pub is_pending_start:        bool,
+    pub terminal_title:          String,
+    pub restart_token:           Uuid,
+    pub session_id:              Option<String>,
+    pub resume_session_id:       Option<String>,
+    pub fork_session:            bool,
     /// The ACP session id for a Panel-mode agent (`None` outside Panel
     /// mode, or before the first ACP session is created). Distinct from
     /// `session_id`, which is the terminal-resume identifier - ACP's
     /// `session/load` and a CLI's own `--resume <id>` are not always the
     /// same identifier space.
-    pub acp_session_id:    Option<String>,
-    pub metadata:          BTreeMap<String, String>,
+    pub acp_session_id:          Option<String>,
+    pub metadata:                BTreeMap<String, String>,
 
     // Artifact panel state, set by the `display-markdown`, `view-mermaid`
     // and `show-checklist` MCP tools. Runtime only, never persisted.
@@ -193,6 +206,12 @@ impl Agent {
         knot_core::agent_type::is_shell(&self.agent_type)
     }
 
+    /// The folder the agent's git is read from: its working directory when
+    /// it has reported one, its folder otherwise.
+    pub fn effective_folder(&self) -> &str {
+        self.working_dir.as_deref().unwrap_or(&self.folder)
+    }
+
     /// The last component of the agent's folder, for the places that label
     /// an agent by where it works rather than by its full path - a sidebar
     /// row, a dashboard card. Falls back to the whole folder when there is
@@ -248,44 +267,46 @@ mod tests {
     }
 
     pub(crate) fn test_agent() -> Agent {
-        Agent { id:                 Uuid::new_v4(),
-                name:               "proj".to_string(),
-                avatar:             "🤖".to_string(),
-                folder:             "/tmp/proj".to_string(),
-                agent_type:         "claude".to_string(),
-                created_by:         None,
-                is_companion:       false,
-                shell_command:      None,
-                persona_id:         None,
-                view_mode:          ViewMode::Terminal,
-                activation_mode:    ActivationMode::Passive,
-                locked:             false,
-                autopilot_off:      false,
-                description:        String::new(),
-                capabilities:       Default::default(),
-                cost_tier:          Default::default(),
-                session_config:     BTreeMap::new(),
-                startup_prompt:     None,
-                activated:          false,
-                state:              AgentState::Idle,
-                idle_since:         None,
-                awaiting_reason:    None,
-                session_limit:      None,
-                status_text:        String::new(),
-                is_registered:      false,
-                is_pending_start:   false,
-                terminal_title:     String::new(),
-                restart_token:      Uuid::new_v4(),
-                session_id:         None,
-                resume_session_id:  None,
-                fork_session:       false,
-                acp_session_id:     None,
-                metadata:           BTreeMap::new(),
-                markdown_file:      None,
-                markdown_maximized: false,
-                markdown_history:   Vec::new(),
-                mermaid_source:     None,
-                mermaid_title:      None,
-                checklist:          None, }
+        Agent { id:                      Uuid::new_v4(),
+                name:                    "proj".to_string(),
+                avatar:                  "🤖".to_string(),
+                folder:                  "/tmp/proj".to_string(),
+                agent_type:              "claude".to_string(),
+                created_by:              None,
+                is_companion:            false,
+                shell_command:           None,
+                persona_id:              None,
+                view_mode:               ViewMode::Terminal,
+                activation_mode:         ActivationMode::Passive,
+                locked:                  false,
+                autopilot_off:           false,
+                description:             String::new(),
+                capabilities:            Default::default(),
+                cost_tier:               Default::default(),
+                session_config:          BTreeMap::new(),
+                startup_prompt:          None,
+                activated:               false,
+                state:                   AgentState::Idle,
+                idle_since:              None,
+                awaiting_reason:         None,
+                session_limit:           None,
+                status_text:             String::new(),
+                working_dir:             None,
+                fresh_context_requested: false,
+                is_registered:           false,
+                is_pending_start:        false,
+                terminal_title:          String::new(),
+                restart_token:           Uuid::new_v4(),
+                session_id:              None,
+                resume_session_id:       None,
+                fork_session:            false,
+                acp_session_id:          None,
+                metadata:                BTreeMap::new(),
+                markdown_file:           None,
+                markdown_maximized:      false,
+                markdown_history:        Vec::new(),
+                mermaid_source:          None,
+                mermaid_title:           None,
+                checklist:               None, }
     }
 }

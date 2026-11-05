@@ -63,6 +63,17 @@ pub(crate) struct WorkspaceWindow {
     /// The Issues and OpenSpec tabs' repositories, issues and changes,
     /// fetched off the main thread and drained by `repaint_poll_tick`.
     pub(super) work_items:                       super::work_items::WorkItemCaches,
+    /// Codex's usage allowance, read from its session files off the main
+    /// thread while a Codex agent is in the window (#291).
+    pub(super) codex_usage:
+        crate::refresh_cache::RefreshCache<(), Option<crate::codex_usage::CodexUsage>>,
+    /// The reset the user dismissed the usage banner for: hidden until the
+    /// window resets, then shown again if the next one fills up.
+    pub(super) codex_usage_dismissed:            Option<Option<std::time::SystemTime>>,
+    /// How Codex's usage is read: `codex_usage::read_current` - this
+    /// machine's own `~/.codex` - everywhere but a test, which swaps in a
+    /// stub rather than read the developer's files.
+    pub(super) codex_usage_source:               fn() -> Option<crate::codex_usage::CodexUsage>,
     /// Agents whose PTY process has exited, queued by the reader thread and
     /// drained by the repaint poll - the callback runs off the main thread
     /// and cannot touch the view directly.
@@ -374,6 +385,10 @@ pub(crate) struct WorkspaceWindow {
     /// One working-tree watch per open panel. `Arc` because the watch's
     /// callback outlives the frame that started it.
     pub(super) git_watches:                      BTreeMap<Uuid, Arc<knot_watch::Watch>>,
+    /// The folder each agent's git status, diffs and diff stat were read
+    /// from, so a change of folder drops what was read from the old one and
+    /// moves the panel's watch (#25).
+    pub(super) git_read_folders:                 crate::read_folders::ReadFolders,
     /// Set by a watch callback, which runs on a tokio task with no GPUI
     /// context and so cannot touch the caches or notify. The repaint poll
     /// reads it, forgets the agent's status and redraws - the same
@@ -473,13 +488,10 @@ impl Drop for WorkspaceWindow {
         // polite `session/close` on top of that, and best-effort only -
         // this runtime is itself dropped moments later, so a task that has
         // not started may never run. Nothing depends on it having.
+        // Retired, not dropped: a slot still connecting would otherwise
+        // finish after the window closed, and its adapter outlive it (#382).
         for slot in std::mem::take(&mut self.panel_sessions).into_values() {
-            let handle = match std::mem::replace(&mut *slot.lock(),
-                                                 panel_session::PanelSessionSlot::connecting().0)
-            {
-                panel_session::PanelSessionSlot::Ready(handle) => Some(handle),
-                _ => None,
-            };
+            let handle = slot.lock().retire();
             if let Some(handle) = handle {
                 let _runtime_guard = self.runtime.enter();
                 self.runtime.spawn(async move { handle.stop().await });

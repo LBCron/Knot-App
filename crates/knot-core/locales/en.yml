@@ -112,14 +112,22 @@ panel:
   copy_prompt: "Copy prompt"
   copy_response: "Copy response"
   copied_prompt: "Copied prompt to clipboard"
+  save_prompt: "Save to prompt library"
   copied_response: "Copied response to clipboard"
   reply_to_response: "Reply"
   copy_code: "Copy code"
   copied_code: "Copied code to clipboard"
   queued: "Queued"
+  # The working turn's time and its estimated tokens (#35), Claude Code's
+  # "(42s · 1.2k tokens)". The "~" marks the count as an estimate.
+  turn_progress: "%{elapsed} · ~%{tokens} tokens"
   queued_inbox_nudge: "Queued inbox check"
   queued_autopilot: "Queued Autopilot reply"
   queued_startup_prompt: "Queued startup prompt"
+  # A queued prompt the session's usage limit is holding (#368): it goes on
+  # its own when the limit lifts, or now if the user says so.
+  queued_session_limit: "Waiting for the session limit to reset"
+  send_queued_now: "Send now"
   failed: "Failed"
   retry: "Retry"
   retry_queued: "Retry this message"
@@ -243,6 +251,10 @@ settings:
     delete_persona: "Delete Persona"
     delete_body: "This permanently deletes \"%{name}\". This can't be undone."
     edit: "Edit persona"
+    delete: "Delete persona"
+    in_use_by: "In use by %{agents}"
+    used_by: "Used by"
+    show_agent: "Show this agent"
     add: "Add Persona…"
     restore_defaults: "Restore Defaults"
     import_from_library: "Import from Library…"
@@ -363,6 +375,9 @@ keymap:
     jump_to_bottom: "Jump to bottom"
     toggle_artifacts: "Show or hide artifacts"
     insert_prompt: "Insert prompt"
+    open_personas: "Open Personas"
+    open_prompts: "Open Prompts"
+    open_bench: "Open Bench"
   fixed:
     quit: "Quit Knot"
     settings: "Settings"
@@ -703,6 +718,34 @@ library:
     title: "Prompts"
   bench:
     title: "Bench"
+  # Submitting a persona or prompt to Knot-Library as a pull request (#43).
+  submit:
+    persona_tooltip: "Submit to Knot-Library…"
+    prompt_tooltip: "Submit to Knot-Library…"
+    title: "Submit to Knot-Library"
+    intro: "Knot-Library needs a title, a one-line description and, optionally, tags. You review the file before anything is sent."
+    title_label: "Title"
+    description_label: "Description"
+    description_placeholder: "One line on what it is for"
+    tags_label: "Tags"
+    tags_placeholder: "Optional, such as review, rust"
+    cancel: "Cancel"
+    review: "Review…"
+    back: "Back"
+    submit: "Open on GitHub"
+    checking: "Checking whether Knot-Library already has this…"
+    updates: "Knot-Library already has this item, so this updates %{path}."
+    unchecked: "Couldn't reach Knot-Library to check whether it already has this, so it goes as a new item."
+    review_intro: "This is the file as it will be proposed. Edit anything that should not be public - a prompt saved from a conversation holds the text as sent, with paths, branch names and host names filled in. GitHub opens next; propose the change there and it makes the fork and the pull request."
+    local_values: "This looks like it holds your home folder, an email address or a credential. Remove it before opening on GitHub."
+    invalid_title: "Keep the title to one line of at most %{max} characters."
+    invalid_description: "Keep the description to one line of at most %{max} characters."
+    invalid_tag: "Use only a-z, 0-9 and - in tags, at most 32 characters each: %{tag}"
+    too_many_tags: "Use at most %{max} tags."
+    opened: "Opened on GitHub."
+    update_copied: "Opened Knot-Library's file for editing. Your version is on the clipboard: replace the file's contents with it."
+    opened_copied: "Opened on GitHub. The file is too long to pass along, so it is on the clipboard: paste it into the editor."
+    open_failed: "Couldn't open the browser. The file is on the clipboard."
 
 plan:
   title: "Plan"
@@ -847,6 +890,10 @@ pull_requests:
   open_in_browser: "Open in Browser"
   copy_url: "Copy URL"
 
+# A background adapter update check finding an update (#367).
+adapter_updates:
+  notification_title: "Knot - Adapter update"
+  notification_body: "%{adapter} %{version} is available. Update it in Settings > Coding."
 mcp_server:
   failure_title: "Knot - MCP server"
   failure_body: "The MCP server is not running. Agents cannot reach Knot until it recovers."
@@ -1060,6 +1107,7 @@ git_panel:
 # diagram at once. Its two sections are drawn by the panes that were ported
 # first; these are the container's own words.
 artifact_panel:
+  earlier_files: "Earlier files from this agent"
   title: "Artifacts"
   # The expand control names the state it moves to, not the one it is in,
   # which is how every other toggle in the window is worded.
@@ -1113,3 +1161,11 @@ prompt_variables:
   date: "today's date"
   clipboard: "the clipboard's text"
   clipboard_in_startup: "{{clipboard}} is always empty in a startup prompt, which is sent without you choosing it."
+
+# The banner over a Codex agent's pane when its usage allowance is nearly
+# spent (#291). `when` is the reset as a local date and time.
+usage:
+  approaching_limit: "Approaching usage limit"
+  resets_at: "Resets at %{when}"
+  get_more: "Get more usage"
+  dismiss: "Dismiss"

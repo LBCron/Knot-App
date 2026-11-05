@@ -59,7 +59,10 @@ impl WorkspaceWindow {
                 .p_2()
                 .border_t_1()
                 .border_color(cx.theme().border)
-                .children(Self::render_panel_queued_prompts(id, queued_prompts, cx))
+                .children(Self::render_panel_queued_prompts(id,
+                                                            queued_prompts,
+                                                            self.held_by_session_limit(id),
+                                                            cx))
                 // Files and images dragged from Finder attach the same way the
                 // paperclip and a pasted screenshot do, per `acp-panel-ui`'s
                 // attached-context requirement.

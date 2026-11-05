@@ -10,6 +10,7 @@ pub const CREATE_AGENT: &str = "create-agent";
 pub const CLOSE_AGENT: &str = "close-agent";
 pub const CREATE_WORKTREE: &str = "create-worktree";
 pub const SET_STATUS: &str = "set-status";
+pub const SET_WORKING_DIRECTORY: &str = "set-working-directory";
 pub const DISPLAY_MARKDOWN: &str = "display-markdown";
 pub const VIEW_MERMAID: &str = "view-mermaid";
 pub const SHOW_CHECKLIST: &str = "show-checklist";

@@ -23,6 +23,7 @@ fn mutates_agent_state(name: &str) -> bool {
              | consts::CREATE_AGENT
              | consts::CLOSE_AGENT
              | consts::SET_STATUS
+             | consts::SET_WORKING_DIRECTORY
              | consts::DISPLAY_MARKDOWN
              | consts::VIEW_MERMAID
              | consts::SHOW_CHECKLIST)
@@ -152,6 +153,13 @@ pub fn tool_catalog() -> Vec<ToolDefinition> {
                  "string",
                  "Short status text describing what you are currently doing. Use empty string to clear.")],
               &["agentId", "status"]),
+         tool(consts::SET_WORKING_DIRECTORY,
+              "Tell Knot which git working tree you are working in, so its git panel and diff stats show that tree rather than your folder. Call it when you start working in a worktree (pass the worktree's root, the folder holding .git), and with an empty path when you go back to your folder. A restart or deactivation clears it.",
+              &[("agentId", "string", "Your agent ID"),
+                ("path",
+                 "string",
+                 "Absolute path to the root of the git working tree you are working in (a leading ~/ is your home folder). Empty to go back to your folder.")],
+              &["agentId", "path"]),
          tool(consts::DISPLAY_MARKDOWN,
               "Display a markdown file in a panel for the user to review. Use this to show plans, documentation, or any markdown content that needs user attention. Also use if the user asks you to show him a file. Never assume the panel is open or displaying the right file as the user may have closed it: call the tool again when relevant.",
               &[("agentId", "string", "Your agent ID"),
@@ -169,8 +177,9 @@ pub fn tool_catalog() -> Vec<ToolDefinition> {
                 ("tasks",
                  "array",
                  "Tasks as objects: id (unique in this plan), goal, and optionally assignee \
-                  (an agent name or ID), capabilities (tags to resolve at dispatch time) and \
-                  dependsOn (ids in this same plan)")],
+                  (an agent name or ID), capabilities (tags to resolve at dispatch time), \
+                  dependsOn (ids in this same plan) and resetContext (true to start the \
+                  assignee on a fresh conversation for this task, once it is not working)")],
               &["agentId", "tasks"]),
          tool(consts::DISPATCH_TASK,
               "Dispatch one ready task from your committed plan. Refused while any \
@@ -318,6 +327,9 @@ impl ToolCatalog for McpToolCatalog {
             consts::CLOSE_AGENT => agents::close_agent(&mut self.agents.lock(), &arguments),
             consts::CREATE_WORKTREE => repos::create_worktree(&arguments),
             consts::SET_STATUS => agents::set_status(&mut self.agents.lock(), &arguments),
+            consts::SET_WORKING_DIRECTORY => {
+                agents::set_working_directory(&mut self.agents.lock(), &arguments)
+            }
             consts::DISPLAY_MARKDOWN => {
                 panels::display_markdown(&mut self.agents.lock(), &arguments)
             }

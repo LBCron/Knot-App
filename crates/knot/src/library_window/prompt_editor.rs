@@ -69,14 +69,27 @@ fn prompt_editor_window_options(title: impl Into<gpui_kit::SharedString>, cx: &A
 /// (#321).
 pub(crate) fn open_prompt_editor(prompt: Option<knot_core::Prompt>, cx: &mut App) {
     let editing_id = prompt.as_ref().map(|p| p.id);
+    let name = prompt.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let text = prompt.as_ref().map(|p| p.text.clone()).unwrap_or_default();
+    open(editing_id, name, text, cx);
+}
+
+/// Opens the prompt editor on a new prompt whose text is `text`, with the
+/// caret in its empty name: a prompt the user sent, being saved to the
+/// library (#42).
+pub(crate) fn open_prompt_editor_with_text(text: String, cx: &mut App) {
+    open(None, String::new(), text, cx);
+}
+
+/// The editor's window, editing `editing_id`'s prompt or a new one, with its
+/// fields starting at `name` and `text`.
+fn open(editing_id: Option<Uuid>, name: String, text: String, cx: &mut App) {
     let title = if editing_id.is_some() {
         knot_core::l10n::t("settings.prompt_editor.title_edit")
     }
     else {
         knot_core::l10n::t("settings.prompt_editor.title_new")
     };
-    let name = prompt.as_ref().map(|p| p.name.clone()).unwrap_or_default();
-    let text = prompt.as_ref().map(|p| p.text.clone()).unwrap_or_default();
     let options = prompt_editor_window_options(title, cx);
     let _ = cx.open_window(options, move |window, cx| {
                   observe_system_appearance(window);
@@ -130,6 +143,12 @@ impl PromptEditor {
     #[cfg(test)]
     pub(crate) fn editing_id(&self) -> Option<Uuid> {
         self.editing_id
+    }
+
+    /// The text field's contents, for tests outside the module.
+    #[cfg(test)]
+    pub(crate) fn text_for_test(&self, cx: &App) -> String {
+        self.text_input.read(cx).value().to_string()
     }
 
     fn fields(&self, cx: &App) -> (String, String) {

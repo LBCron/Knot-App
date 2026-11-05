@@ -16,6 +16,7 @@ use knot_forge::{ForgeAvailability, ForgeRunner};
 use super::kind::IssueKind;
 use super::logs::{Attachment, attachments_by_path, attachments_markdown};
 use super::screenshots;
+use crate::open_in::percent_encode;
 
 /// What the user filed, plus the diagnostics that accompany it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -124,22 +125,6 @@ pub(super) fn compose_url(report: &Report) -> String {
             percent_encode(report.subject.trim()),
             percent_encode(&compose_body(report)),
             percent_encode(report.kind.github_label()))
-}
-
-/// Percent-encodes everything but RFC 3986's unreserved characters, so a
-/// query value can carry spaces, slashes, `&`, `#` and any Unicode without
-/// being cut short or misread.
-pub(super) fn percent_encode(value: &str) -> String {
-    let mut encoded = String::with_capacity(value.len());
-    for byte in value.bytes() {
-        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
-            encoded.push(char::from(byte));
-        }
-        else {
-            encoded.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    encoded
 }
 
 #[cfg(test)]

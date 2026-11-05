@@ -117,6 +117,7 @@ pub(super) fn render_message(ctx: Message<'_>, message: &PanelMessage,
         // system/tool content" requirement.
         PanelMessage::User(text) => {
             let copy_text = text.clone();
+            let save_text = text.clone();
             v_flex()
                 .w_full()
                 .min_w_0()
@@ -176,6 +177,28 @@ pub(super) fn render_message(ctx: Message<'_>, message: &PanelMessage,
                                             );
                                         }),
                                 )
+                                .child({
+                                    // Saves the prompt to the library (#42): the
+                                    // prompt editor, on a new prompt holding this
+                                    // text, named by the user. Deferred: this runs
+                                    // inside the workspace window's update, and the
+                                    // editor is a window of its own.
+                                    let text = save_text.clone();
+                                    Button::new(("panel-save-prompt", index as u64))
+                                        .icon(gpui_kit::assets::IconName::BookPlus)
+                                        .tooltip(knot_core::l10n::t("panel.save_prompt"))
+                                        .ghost()
+                                        .small()
+                                        .debug_selector(move || format!("panel-save-prompt-{index}"))
+                                        .invisible()
+                                        .group_hover(PROMPT_HOVER_GROUP, |style| style.visible())
+                                        .on_click(move |_: &ClickEvent, _, cx| {
+                                            let text = text.clone();
+                                            cx.defer(move |cx| {
+                                                crate::library_window::open_prompt_editor_with_text(text, cx)
+                                            });
+                                        })
+                                })
                                 .child(
                                     div()
                                         .min_w_0()

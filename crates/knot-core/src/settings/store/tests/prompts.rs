@@ -171,7 +171,8 @@ fn insert_prompt_keeps_the_caller_supplied_id() {
     let id = agent_id();
     s.insert_prompt(Prompt { id,
                              name: "From Library".to_string(),
-                             text: "do the thing".to_string() })
+                             text: "do the thing".to_string(),
+                             description: None })
      .unwrap();
     assert_eq!(s.prompts.len(), 1);
     assert_eq!(s.prompt(id).unwrap().name, "From Library");
@@ -184,12 +185,14 @@ fn insert_prompt_rejects_a_duplicate_id() {
     let id = agent_id();
     s.insert_prompt(Prompt { id,
                              name: "First".to_string(),
-                             text: "one".to_string() })
+                             text: "one".to_string(),
+                             description: None })
      .unwrap();
 
     let err = s.insert_prompt(Prompt { id,
                                        name: "Second".to_string(),
-                                       text: "two".to_string() })
+                                       text: "two".to_string(),
+                                       description: None })
                .unwrap_err();
     assert!(matches!(err, Error::Config(_)));
     assert_eq!(s.prompts.len(), 1);
@@ -199,10 +202,40 @@ fn insert_prompt_rejects_a_duplicate_id() {
 fn insert_prompt_rejects_blank_fields() {
     let dir = tempdir().unwrap();
     let mut s = Settings::with_store_root(dir.path());
-    let err = s.insert_prompt(Prompt { id:   agent_id(),
-                                       name: String::new(),
-                                       text: "one".to_string(), })
+    let err = s.insert_prompt(Prompt { id:          agent_id(),
+                                       name:        String::new(),
+                                       text:        "one".to_string(),
+                                       description: None, })
                .unwrap_err();
     assert!(matches!(err, Error::Config(_)));
     assert!(s.prompts.is_empty());
+}
+
+#[test]
+fn a_prompt_description_is_set_trimmed_and_cleared_when_blank() {
+    let dir = tempdir().unwrap();
+    let mut s = Settings::with_store_root(dir.path());
+    let id = s.add_prompt("Review", "Review it.").unwrap();
+
+    s.set_prompt_description(id, "  Reviews the branch. ")
+     .unwrap();
+    assert_eq!(s.prompt(id).unwrap().description.as_deref(),
+               Some("Reviews the branch."));
+    let reread = Settings::load_from_root(dir.path()).unwrap();
+    assert_eq!(reread.prompt(id).unwrap().description.as_deref(),
+               Some("Reviews the branch."),
+               "the description is persisted");
+
+    s.set_prompt_description(id, " ").unwrap();
+    assert_eq!(s.prompt(id).unwrap().description, None);
+}
+
+#[test]
+fn a_prompt_saved_before_descriptions_reads_without_one() {
+    let prompt: Prompt =
+        serde_json::from_str(r#"{"id":"399d4053-a1e4-4266-a847-de5afadb4caa","name":"n","text":"t"}"#)
+            .unwrap();
+    assert_eq!(prompt.description, None);
+    assert!(!serde_json::to_string(&prompt).unwrap()
+                                           .contains("description"));
 }

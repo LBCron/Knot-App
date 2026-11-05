@@ -18,9 +18,13 @@ mod bench_popover;
 mod changes_counts;
 mod changes_tab;
 mod chrome;
+mod codex_usage_refresh;
 mod creation;
 #[cfg(test)]
 mod creation_tests;
+mod fresh_context;
+#[cfg(test)]
+mod git_folder_tests;
 mod git_panel;
 #[cfg(test)]
 mod inbox_nudge_tests;
@@ -49,12 +53,15 @@ mod repaint;
 mod restart_tests;
 #[cfg(test)]
 mod send_prompt_tests;
+mod session_limits;
 mod sessions;
 mod shortcuts;
 #[cfg(test)]
 mod shortcuts_tests;
 mod sidebar_drag;
 mod sidebar_layout;
+#[cfg(test)]
+mod single_adapter_tests;
 #[cfg(test)]
 mod status_dot_tests;
 #[cfg(test)]

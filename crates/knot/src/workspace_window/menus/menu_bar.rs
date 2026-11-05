@@ -183,7 +183,7 @@ impl WorkspaceWindow {
         let state = (!agent.is_shell()).then_some((agent.state, stats));
         Some(SelectedAgentHeader { avatar: agent.avatar.clone(),
                                    name: agent.name.clone(),
-                                   folder: shorten_path(&agent.folder),
+                                   folder: shorten_path(agent.effective_folder()),
                                    header_title: agent.header_title().to_string(),
                                    agent_type: agent.agent_type.clone(),
                                    state,

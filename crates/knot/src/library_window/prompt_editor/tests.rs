@@ -109,6 +109,7 @@ fn saving_redraws_the_open_prompts_window(cx: &mut TestAppContext) {
           let store = std::sync::Arc::new(parking_lot::Mutex::new(knot_agents::AgentStore::new()));
           crate::library_window::open_library_window(crate::library_window::Library::Prompts,
                                                      store,
+                                                     std::sync::Arc::default(),
                                                      cx);
           open_prompt_editor(None, cx);
       });
@@ -144,4 +145,38 @@ fn saving_redraws_the_open_prompts_window(cx: &mut TestAppContext) {
 
     assert!(library.debug_bounds("prompt-row-0").is_some(),
             "the saved prompt is drawn in the Prompts window");
+}
+
+/// Saving a sent prompt (#42) opens a new prompt holding its text, with
+/// the caret in the empty name: the name is the one thing left to give it.
+#[gpui_kit::test]
+fn a_prompt_opened_with_text_is_new_and_starts_at_its_name(cx: &mut TestAppContext) {
+    let dir = TempDir::new().expect("a temporary settings root");
+    cx.update(|cx| {
+          gpui_kit::init(cx);
+          crate::settings_global::install(knot_core::Settings::with_store_root(dir.path()), cx);
+          super::open_prompt_editor_with_text("review the diff".into(), cx);
+      });
+    let handle = cx.update(|cx| *cx.windows().last().expect("the prompt editor opened"));
+    let mut window = VisualTestContext::from_window(handle, cx);
+    window.run_until_parked();
+
+    assert_eq!(focus(&mut window), (true, false));
+    let (editing, name, text) = window.update(|window, cx| {
+                                          let root = window.root::<gpui_kit::component::Root>()
+                                                           .flatten()
+                                                           .expect("the editor's root");
+                                          let editor = root.read(cx)
+                                                           .view()
+                                                           .clone()
+                                                           .downcast::<super::PromptEditor>()
+                                                           .expect("the root holds the editor");
+                                          let editor = editor.read(cx);
+                                          (editor.editing_id,
+                                           editor.name_input.read(cx).value().to_string(),
+                                           editor.text_input.read(cx).value().to_string())
+                                      });
+    assert_eq!(editing, None, "a new prompt, not an edit");
+    assert_eq!(name, "");
+    assert_eq!(text, "review the diff");
 }

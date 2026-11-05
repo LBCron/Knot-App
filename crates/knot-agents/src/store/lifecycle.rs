@@ -38,7 +38,9 @@ impl AgentStore {
                             idle_since: None,
                             awaiting_reason: None,
                             session_limit: None,
+                            fresh_context_requested: false,
                             status_text: String::new(),
+                            working_dir: None,
                             is_registered: false,
                             is_pending_start: false,
                             terminal_title: String::new(),
@@ -179,9 +181,17 @@ impl AgentStore {
         for companion_id in self.companions(id) {
             deactivated.extend(self.deactivate(companion_id));
         }
+        let mut moved_home = false;
         if let Some(agent) = self.agent_mut(id) {
             agent.activated = false;
+            // Its next session starts in its folder, so its git is read
+            // from there again (#25): a deactivated agent is no longer in
+            // the worktree it reported.
+            moved_home = agent.working_dir.take().is_some();
             deactivated.push(id);
+        }
+        if moved_home {
+            self.revise();
         }
         deactivated
     }
@@ -193,6 +203,8 @@ impl AgentStore {
         agent.idle_since = None;
         agent.is_registered = false;
         agent.terminal_title = String::new();
+        // A restarted agent starts in its folder, wherever it had moved.
+        agent.working_dir = None;
         Ok(())
     }
 
@@ -207,6 +219,8 @@ impl AgentStore {
         agent.acp_session_id = None;
         agent.resume_session_id = None;
         agent.fork_session = false;
+        // A fresh conversation is what a dispatched task asked for (#331).
+        agent.fresh_context_requested = false;
         self.recreate_terminal(id)
     }
 
