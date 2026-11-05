@@ -34,7 +34,7 @@ fn icon_button(id: (&'static str, u64), icon: IconName, tooltip: &str) -> Button
 
 /// A section's element id for `id`: the agent's, folded to what `ElementId`
 /// takes, as every per-agent control in the panel does.
-fn element(name: &'static str, id: Uuid) -> (&'static str, u64) {
+pub(super) fn element(name: &'static str, id: Uuid) -> (&'static str, u64) {
     (name, id.as_u128() as u64)
 }
 
@@ -45,6 +45,8 @@ impl WorkspaceWindow {
                                                                 cx: &mut Context<Self>)
                                                                 -> Vec<gpui_kit::AnyElement> {
         let mut actions = self.review_actions(id, file, cx);
+        // The files the agent showed before this one (#29).
+        actions.extend(self.markdown_history_action(id, file, cx));
 
         let size = crate::settings_global::read(cx).markdown_font_size;
         for (name, icon, tooltip, step) in
