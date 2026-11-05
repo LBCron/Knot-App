@@ -69,6 +69,13 @@ Each agent connects on a URL that names it (`…/mcp?agent=<id>`), which Knot pl
 | `show-checklist` | Show a checklist of questions and checkbox items in the calling agent's panel. The user answers in place and presses Send to deliver the answers. Calling it again keeps answers for unchanged items. |
 | `get-checklist` | Read the checklist as the user has left it: ticks, answers, and whether it was sent. |
 
+#### Getting back to an earlier file
+
+When an agent shows a new Markdown file over the one you were reading, the
+earlier one is not lost. The files button in the Markdown section's header lists
+the files the agent has shown before, most recent first; choose one to read it
+again. The agent's context menu has the same list under **Markdown Files**.
+
 #### Approving and reviewing a Markdown file
 
 A Markdown file shown with `display-markdown` offers **Approve** and **Review** in

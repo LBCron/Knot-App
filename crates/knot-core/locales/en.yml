@@ -112,6 +112,7 @@ panel:
   copy_prompt: "Copy prompt"
   copy_response: "Copy response"
   copied_prompt: "Copied prompt to clipboard"
+  save_prompt: "Save to prompt library"
   copied_response: "Copied response to clipboard"
   reply_to_response: "Reply"
   copy_code: "Copy code"
@@ -1078,6 +1079,7 @@ git_panel:
 # diagram at once. Its two sections are drawn by the panes that were ported
 # first; these are the container's own words.
 artifact_panel:
+  earlier_files: "Earlier files from this agent"
   title: "Artifacts"
   # The expand control names the state it moves to, not the one it is in,
   # which is how every other toggle in the window is worded.

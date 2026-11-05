@@ -109,3 +109,46 @@ fn holding_cmd_does_not_move_the_message_below_the_timestamp(cx: &mut TestAppCon
     // released" - the row is always in the layout, only its paint changes.
     assert_eq!(held, not_held);
 }
+
+/// A sent prompt can be saved to the prompt library (#42): pointing at it
+/// reveals a save control beside the copy one, and clicking it opens the
+/// prompt editor holding exactly the prompt's text.
+#[gpui_kit::test]
+fn a_prompt_saves_to_the_prompt_library(cx: &mut TestAppContext) {
+    let dir = tempfile::TempDir::new().expect("a temporary settings root");
+    let mut state = PanelState::new();
+    state.push_user_message("run the gate".to_owned());
+    let window =
+        cx.update(|cx| {
+              gpui_kit::init(cx);
+              crate::settings_global::install(knot_core::Settings::with_store_root(dir.path()), cx);
+              cx.open_window(WindowOptions::default(), |window, cx| {
+                    let list = ListState::new(1, ListAlignment::Top, px(LIST_OVERDRAW));
+                    let view = cx.new(|_| MessageProbe { state,
+                                                         list,
+                                                         cmd_held: false });
+                    cx.new(|cx| Root::new(view, window, cx))
+                })
+                .expect("the probe window should open")
+          });
+    let mut probe = VisualTestContext::from_window(window.into(), cx);
+    probe.run_until_parked();
+    let save = probe.debug_bounds("panel-save-prompt-0")
+                    .expect("the save control is laid out");
+    probe.simulate_mouse_move(save.center(), None, gpui_kit::Modifiers::none());
+    probe.run_until_parked();
+    probe.simulate_click(save.center(), gpui_kit::Modifiers::none());
+    probe.run_until_parked();
+
+    let text = cx.update(|cx| {
+                     cx.windows()
+                       .into_iter()
+                       .filter_map(|window| window.downcast::<Root>())
+                       .filter_map(|root| root.read(cx).ok()?.view().clone().downcast().ok())
+                       .map(|editor: gpui_kit::Entity<crate::library_window::PromptEditor>| {
+                                editor.read(cx).text_for_test(cx)
+                            })
+                       .next()
+                 });
+    assert_eq!(text.as_deref(), Some("run the gate"));
+}
