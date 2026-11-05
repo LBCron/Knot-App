@@ -5,7 +5,7 @@ use gpui_kit::KeyBinding;
 use knot_core::KeybindingSettings;
 use knot_core::ShortcutModifiers;
 
-use crate::app_bootstrap::OpenCommandCenter;
+use crate::app_bootstrap::{OpenBench, OpenCommandCenter, OpenPersonas, OpenPrompts};
 use crate::keymap::BindFn;
 use crate::keymap::Chord;
 use crate::keymap::FocusAgentInput;
@@ -42,6 +42,9 @@ pub(crate) struct Resolved {
     jump_to_bottom:       Chord,
     toggle_artifacts:     Chord,
     insert_prompt:        Chord,
+    open_personas:        Chord,
+    open_prompts:         Chord,
+    open_bench:           Chord,
 }
 
 /// A default that does not parse is a bug in `Shortcut::default_chord`,
@@ -66,7 +69,10 @@ impl Resolved {
                open_command_center:  default_chord(Shortcut::OpenCommandCenter),
                jump_to_bottom:       default_chord(Shortcut::JumpToBottom),
                toggle_artifacts:     default_chord(Shortcut::ToggleArtifacts),
-               insert_prompt:        default_chord(Shortcut::InsertPrompt), }
+               insert_prompt:        default_chord(Shortcut::InsertPrompt),
+               open_personas:        default_chord(Shortcut::OpenPersonas),
+               open_prompts:         default_chord(Shortcut::OpenPrompts),
+               open_bench:           default_chord(Shortcut::OpenBench), }
     }
 
     /// The stored customizations applied over the defaults, one at a time
@@ -88,7 +94,10 @@ impl Resolved {
                        (Shortcut::OpenCommandCenter, &stored.open_command_center),
                        (Shortcut::JumpToBottom, &stored.jump_to_bottom),
                        (Shortcut::ToggleArtifacts, &stored.toggle_artifacts),
-                       (Shortcut::InsertPrompt, &stored.insert_prompt)];
+                       (Shortcut::InsertPrompt, &stored.insert_prompt),
+                       (Shortcut::OpenPersonas, &stored.open_personas),
+                       (Shortcut::OpenPrompts, &stored.open_prompts),
+                       (Shortcut::OpenBench, &stored.open_bench)];
         for (shortcut, source) in singles {
             let Some(source) = source
             else {
@@ -143,7 +152,10 @@ impl Resolved {
                              open_command_center:        chord(Shortcut::OpenCommandCenter),
                              jump_to_bottom:             chord(Shortcut::JumpToBottom),
                              toggle_artifacts:           chord(Shortcut::ToggleArtifacts),
-                             insert_prompt:              chord(Shortcut::InsertPrompt), }
+                             insert_prompt:              chord(Shortcut::InsertPrompt),
+                             open_personas:              chord(Shortcut::OpenPersonas),
+                             open_prompts:               chord(Shortcut::OpenPrompts),
+                             open_bench:                 chord(Shortcut::OpenBench), }
     }
 
     pub(crate) fn modifiers(&self, shortcut: Shortcut) -> Option<ShortcutModifiers> {
@@ -163,6 +175,9 @@ impl Resolved {
             Shortcut::JumpToBottom => Some(&self.jump_to_bottom),
             Shortcut::ToggleArtifacts => Some(&self.toggle_artifacts),
             Shortcut::InsertPrompt => Some(&self.insert_prompt),
+            Shortcut::OpenPersonas => Some(&self.open_personas),
+            Shortcut::OpenPrompts => Some(&self.open_prompts),
+            Shortcut::OpenBench => Some(&self.open_bench),
             Shortcut::SelectWorkspace | Shortcut::SelectAgent => None,
         }
     }
@@ -188,6 +203,9 @@ impl Resolved {
             Shortcut::JumpToBottom => self.jump_to_bottom = chord,
             Shortcut::ToggleArtifacts => self.toggle_artifacts = chord,
             Shortcut::InsertPrompt => self.insert_prompt = chord,
+            Shortcut::OpenPersonas => self.open_personas = chord,
+            Shortcut::OpenPrompts => self.open_prompts = chord,
+            Shortcut::OpenBench => self.open_bench = chord,
             Shortcut::SelectWorkspace | Shortcut::SelectAgent => {}
         }
         self
@@ -222,14 +240,17 @@ impl Resolved {
                 out.push(ConfiguredBinding { chord, bind });
             }
         }
-        let singles: [(Shortcut, BindFn); 7] =
+        let singles: [(Shortcut, BindFn); 10] =
             [(Shortcut::FocusAgentInput, |c| KeyBinding::new(c, FocusAgentInput, None)),
              (Shortcut::ToggleDashboard, |c| KeyBinding::new(c, ToggleDashboard, None)),
              (Shortcut::TogglePullRequests, |c| KeyBinding::new(c, TogglePullRequests, None)),
              (Shortcut::OpenCommandCenter, |c| KeyBinding::new(c, OpenCommandCenter, None)),
              (Shortcut::JumpToBottom, |c| KeyBinding::new(c, JumpToBottom, None)),
              (Shortcut::ToggleArtifacts, |c| KeyBinding::new(c, ToggleArtifacts, None)),
-             (Shortcut::InsertPrompt, |c| KeyBinding::new(c, InsertPrompt, None))];
+             (Shortcut::InsertPrompt, |c| KeyBinding::new(c, InsertPrompt, None)),
+             (Shortcut::OpenPersonas, |c| KeyBinding::new(c, OpenPersonas, None)),
+             (Shortcut::OpenPrompts, |c| KeyBinding::new(c, OpenPrompts, None)),
+             (Shortcut::OpenBench, |c| KeyBinding::new(c, OpenBench, None))];
         for (shortcut, bind) in singles {
             for chord in self.chords_of(shortcut) {
                 out.push(ConfiguredBinding { chord, bind });
