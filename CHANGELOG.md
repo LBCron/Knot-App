@@ -1,4 +1,40 @@
 
+## 1.36.0 - 2026-11-05
+
+### Added
+- Hold prompts until a session limit resets, with Send now
+- Show Session limit for a terminal agent's usage notice
+- Show the working turn's time and approximate tokens
+- Show an agent's status in its compact sidebar tooltip
+- Warn when a Codex agent nears its usage limit
+- Name the agents using a persona, and link to them
+- Group each agent's options and adapter, and check adapters for updates
+- Let an agent tell Knot which worktree it is working in
+- Submit a persona or prompt to Knot-Library
+- Review a library submission and update items it has
+- List an agent's earlier markdown files in the artifact panel
+- Add configurable shortcuts for Personas, Prompts and Bench
+- Name the file an artifact approval is for
+- Let a plan step start its assignee fresh
+- Save a sent prompt to the prompt library
+
+
+### Documentation
+- Record that agents report their working directory
+- Accept ADR-0005
+
+
+### Fixed
+- Retry a just-past session reset in a minute, not tomorrow
+- Draw a session limit in a bold, bright red
+- Re-arm the limit scan on lift; let Input through
+- Drop an agent's git state when its folder changes
+- Clear an agent's working directory when it is deactivated
+- Refuse resetContext while the assignee holds a task
+- Retire a panel slot so its connect cannot outlive teardown
+
+
+
 ## 1.35.0 - 2026-10-30
 
 ### Added
