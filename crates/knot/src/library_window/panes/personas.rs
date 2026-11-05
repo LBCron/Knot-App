@@ -15,9 +15,11 @@ use gpui_kit::component::WindowExt;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::div;
 use gpui_kit::px;
+use knot_library::ContributionKind;
 use uuid::Uuid;
 
 use super::super::persona_editor::open_persona_editor;
+use super::super::submit::{Submission, open_submit_dialog};
 use crate::library_window::LibraryWindow;
 
 /// An agent a persona is assigned to (#365).
@@ -169,6 +171,26 @@ impl LibraryWindow {
                                 h_flex()
                                     .flex_shrink_0()
                                     .gap_1()
+                                    .child(
+                                        crate::controls::icon_button(
+                                            ("persona-submit", index),
+                                            "icons/git-pull-request-arrow.svg",
+                                            knot_core::l10n::t("library.submit.persona_tooltip"),
+                                            false,
+                                        )
+                                        .debug_selector(move || format!("persona-submit-{index}"))
+                                        .on_click({
+                                            let submission = Submission {
+                                                kind: ContributionKind::Persona,
+                                                id,
+                                                name: persona.name.clone(),
+                                                body: persona.instructions.clone(),
+                                            };
+                                            move |_, window, app| {
+                                                open_submit_dialog(submission.clone(), window, app)
+                                            }
+                                        }),
+                                    )
                                     .child(
                                         crate::controls::icon_button(
                                             ("persona-edit", index),

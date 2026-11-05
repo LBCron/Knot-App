@@ -714,6 +714,26 @@ library:
     title: "Prompts"
   bench:
     title: "Bench"
+  # Submitting a persona or prompt to Knot-Library as a pull request (#43).
+  submit:
+    persona_tooltip: "Submit to Knot-Library…"
+    prompt_tooltip: "Submit to Knot-Library…"
+    title: "Submit to Knot-Library"
+    intro: "GitHub opens with this as a new file in Knot-Library. Propose the change there, and GitHub makes the fork and the pull request."
+    title_label: "Title"
+    description_label: "Description"
+    description_placeholder: "One line on what it is for"
+    tags_label: "Tags"
+    tags_placeholder: "Optional, such as review, rust"
+    cancel: "Cancel"
+    submit: "Open on GitHub"
+    invalid_title: "Keep the title to one line of at most %{max} characters."
+    invalid_description: "Keep the description to one line of at most %{max} characters."
+    invalid_tag: "Use only a-z, 0-9 and - in tags, at most 32 characters each: %{tag}"
+    too_many_tags: "Use at most %{max} tags."
+    opened: "Opened on GitHub."
+    opened_copied: "Opened on GitHub. The file is too long to pass along, so it is on the clipboard: paste it into the editor."
+    open_failed: "Couldn't open the browser. The file is on the clipboard."
 
 plan:
   title: "Plan"

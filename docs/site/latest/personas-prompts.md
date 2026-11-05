@@ -64,6 +64,44 @@ is sent the new text. Deleting an unreferenced prompt removes it immediately; de
 referenced one asks for confirmation naming how many agents and bench entries will
 launch without a startup prompt.
 
+### Submitting to Knot-Library
+
+A persona or prompt you wrote can be offered to
+[Knot-Library](https://github.com/pilgrimagesoftware/Knot-Library), the shared
+collection Import… reads from. Click the pull request icon on its row in the Personas or
+Prompts window. A dialog asks for what the library needs and Knot does not keep:
+
+- **Title** - starts as the item's name. One line, at most 80 characters. It also
+  names the file: "Code review" becomes `prompts/code-review.md`.
+- **Description** - one line, at most 200 characters, saying what the item is for.
+- **Tags** - optional, comma-separated, at most 10, each of `a-z`, `0-9` and `-`.
+
+"Open on GitHub" stays disabled until these pass. It opens GitHub's new-file page in
+Knot-Library with the file filled in:
+
+```markdown
+---
+id: 399d4053-a1e4-4266-a847-de5afadb4caa
+title: "Code review"
+description: "Review the changes on the current branch."
+tags: [review, quality]
+---
+Review the changes on {{branch}} ...
+```
+
+Review it there and choose Propose changes. If you cannot write to the library, GitHub
+forks it for you and opens the pull request from the fork. Nothing leaves Knot until you
+do, and Knot needs neither the GitHub CLI nor a token for this.
+
+Caveats:
+
+- The file keeps the item's own id, so importing it back later finds it already held.
+  An item you imported from Knot-Library already has its id there, and the library's
+  check rejects a pull request that reuses one.
+- A file too long to fit in a web address (long persona instructions, for instance) is
+  copied to the clipboard instead, and the page opens empty: paste it into GitHub's
+  editor. The same happens if no browser opens.
+
 ### The Bench window
 
 It lists every bench entry - avatar, name, the folder's last path component, and its

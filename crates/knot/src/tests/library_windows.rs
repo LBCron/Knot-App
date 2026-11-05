@@ -289,3 +289,38 @@ fn the_personas_toolbar_buttons_sit_together(cx: &mut TestAppContext) {
                  group rather than grouped at its left");
     }
 }
+
+/// Each prompt and persona row offers to submit it to Knot-Library (#43),
+/// and the action asks for the rest in a dialog.
+#[gpui_kit::test]
+fn a_row_offers_to_submit_its_item_to_knot_library(cx: &mut TestAppContext) {
+    for (library, selector) in [(Library::Personas, "persona-submit-0"),
+                                (Library::Prompts, "prompt-submit-0")]
+    {
+        let window = cx.update(|cx| {
+                           gpui_kit::init(cx);
+                           WindowRegistry::install(cx);
+                           install_settings(cx);
+                           crate::settings_global::write(cx, |settings| {
+                               settings.restore_default_personas()
+                                       .expect("the built-in personas restore");
+                               settings.add_prompt("Review", "Review it.")
+                                       .expect("the prompt is added");
+                           });
+                           open_library_window(library, store(), messages(), cx);
+                           cx.windows().last().copied().expect("the library window")
+                       });
+        let mut window = VisualTestContext::from_window(window, cx);
+        window.run_until_parked();
+
+        let button = window.debug_bounds(selector)
+                           .unwrap_or_else(|| panic!("{selector} was not drawn"));
+        window.simulate_click(button.center(), gpui_kit::Modifiers::none());
+        window.run_until_parked();
+
+        assert!(window.update(|window, app| {
+                          gpui_kit::component::WindowExt::has_active_dialog(window, app)
+                      }),
+                "{library:?}: the submit dialog opened");
+    }
+}

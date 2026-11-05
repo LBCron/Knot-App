@@ -230,6 +230,22 @@ pub(crate) fn open_url(url: &str) -> bool {
     run_open(&[], url)
 }
 
+/// Percent-encodes everything but RFC 3986's unreserved characters, so a
+/// query value can carry spaces, slashes, `&`, `#` and any Unicode without
+/// being cut short or misread.
+pub(crate) fn percent_encode(value: &str) -> String {
+    let mut encoded = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            encoded.push(char::from(byte));
+        }
+        else {
+            encoded.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    encoded
+}
+
 /// Whether this platform can show a file in its file manager at all.
 ///
 /// The artifact panel leaves Reveal in Finder out entirely where this is

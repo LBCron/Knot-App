@@ -490,3 +490,8 @@ pub(crate) const ADAPTER_UPDATE_NOTIFICATION_TAG_PREFIX: &str = "adapter-update:
 /// Characters to a token, for the working turn's estimate (#35): the usual
 /// rule of thumb for English text and code.
 pub(crate) const CHARS_PER_TOKEN: usize = 4;
+
+/// The longest Knot-Library new-file address handed to the browser (#43).
+/// GitHub refuses a much longer one, so past this the file goes to the
+/// clipboard and the page opens empty.
+pub(crate) const LIBRARY_SUBMIT_URL_MAX: usize = 8000;
