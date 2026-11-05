@@ -61,6 +61,8 @@ mod shortcuts_tests;
 mod sidebar_drag;
 mod sidebar_layout;
 #[cfg(test)]
+mod single_adapter_tests;
+#[cfg(test)]
 mod status_dot_tests;
 #[cfg(test)]
 mod status_repaint_tests;

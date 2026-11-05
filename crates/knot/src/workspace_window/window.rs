@@ -488,13 +488,10 @@ impl Drop for WorkspaceWindow {
         // polite `session/close` on top of that, and best-effort only -
         // this runtime is itself dropped moments later, so a task that has
         // not started may never run. Nothing depends on it having.
+        // Retired, not dropped: a slot still connecting would otherwise
+        // finish after the window closed, and its adapter outlive it (#382).
         for slot in std::mem::take(&mut self.panel_sessions).into_values() {
-            let handle = match std::mem::replace(&mut *slot.lock(),
-                                                 panel_session::PanelSessionSlot::connecting().0)
-            {
-                panel_session::PanelSessionSlot::Ready(handle) => Some(handle),
-                _ => None,
-            };
+            let handle = slot.lock().retire();
             if let Some(handle) = handle {
                 let _runtime_guard = self.runtime.enter();
                 self.runtime.spawn(async move { handle.stop().await });

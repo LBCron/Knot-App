@@ -69,7 +69,9 @@ impl WorkspaceWindow {
         for (id, slot) in &self.panel_sessions {
             let text = match &mut *slot.lock() {
                 PanelSessionSlot::Ready(handle) => handle.take_startup_prompt(),
-                PanelSessionSlot::Connecting(_) | PanelSessionSlot::Failed(_) => None,
+                PanelSessionSlot::Connecting(_)
+                | PanelSessionSlot::Failed(_)
+                | PanelSessionSlot::Retired => None,
             };
             if let Some(text) = text {
                 self.panel_prompt_queues
