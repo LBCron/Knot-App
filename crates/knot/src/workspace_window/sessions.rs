@@ -21,7 +21,6 @@ use parking_lot::Mutex;
 use uuid::Uuid;
 
 use crate::app_state::apply_terminal_status;
-use crate::panel_session;
 use crate::panel_state;
 use crate::workspace_window::WorkspaceWindow;
 use crate::workspace_window::pane_focus::FocusTarget;
@@ -220,17 +219,27 @@ impl WorkspaceWindow {
         // splices the conversation back in).
         self.panel_lists.remove(&id);
         self.panel_list_row_counts.remove(&id);
-        if let Some(slot) = self.panel_sessions.remove(&id) {
-            let handle = match std::mem::replace(&mut *slot.lock(),
-                                                 panel_session::PanelSessionSlot::connecting().0)
-            {
-                panel_session::PanelSessionSlot::Ready(handle) => Some(handle),
-                _ => None,
-            };
-            if let Some(handle) = handle {
-                let _runtime_guard = self.runtime.enter();
-                self.runtime.spawn(async move { handle.stop().await });
-            }
+        self.retire_panel_session(id);
+    }
+
+    /// Takes `id`'s panel slot out of the window and retires it, stopping
+    /// its adapter whichever phase it is in (#382).
+    ///
+    /// The one place a slot leaves `panel_sessions`, so every path that
+    /// tears a panel session down - deactivate, remove, restart, retry -
+    /// lets go of it the same way. Retiring rather than dropping is what
+    /// keeps a start that is still connecting from finishing behind the
+    /// window's back and running beside whatever starts next.
+    pub(super) fn retire_panel_session(&mut self, id: Uuid) {
+        let Some(slot) = self.panel_sessions.remove(&id)
+        else {
+            return;
+        };
+        // Bound first, so the slot's guard is dropped before the spawn.
+        let handle = slot.lock().retire();
+        if let Some(handle) = handle {
+            let _runtime_guard = self.runtime.enter();
+            self.runtime.spawn(async move { handle.stop().await });
         }
     }
 
@@ -238,9 +247,10 @@ impl WorkspaceWindow {
     ///
     /// Only reachable from the `Failed` slot, which owns no handle and no
     /// subprocess - there is nothing to shut down, just the dead slot to
-    /// clear so `ensure_panel_session` stops short-circuiting on it.
+    /// clear so `ensure_panel_session` stops short-circuiting on it. Retired
+    /// all the same, so no path drops a slot any other way.
     pub(super) fn retry_panel_session(&mut self, id: Uuid, cx: &App) {
-        self.panel_sessions.remove(&id);
+        self.retire_panel_session(id);
         self.panel_phases.remove(&id);
         // The new connection gets a new slot; the old list's scroll handler
         // points at the dead one, so rebuild it.

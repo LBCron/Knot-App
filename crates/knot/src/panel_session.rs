@@ -296,13 +296,38 @@ impl PanelRecorder {
 /// message rather than hanging on `Connecting` forever).
 pub enum PanelSessionSlot {
     /// Connecting, carrying the step the attempt is currently on so the
-    /// placeholder can say what it's waiting for.
-    Connecting(ConnectProgress),
+    /// placeholder can say what it's waiting for, and the signal that
+    /// cancels the attempt when the slot is retired.
+    Connecting(Connecting),
     /// Boxed so the slot is a pointer wide in every phase: the handle is by
     /// far the largest variant and had reached clippy's
     /// `large_enum_variant` bound exactly.
     Ready(Box<PanelSessionHandle>),
     Failed(String),
+    /// Torn down by the window. Terminal: [`connect_into`] publishes nothing
+    /// into a retired slot, and an adapter it had already started is
+    /// stopped rather than left running with no pane (#382).
+    Retired,
+}
+
+/// A `Connecting` slot's contents.
+///
+/// Holds both ends of the retirement signal. [`connect_into`] takes the
+/// receiver when it starts, and the sender stays here, so replacing this
+/// variant - with `Retired`, or with the attempt's own outcome - is what
+/// fires it. Retiring a slot therefore cancels its connect by construction,
+/// with no flag for a teardown path to forget to set.
+pub struct Connecting {
+    progress: ConnectProgress,
+    retired:  Option<tokio::sync::oneshot::Receiver<()>>,
+    _retire:  tokio::sync::oneshot::Sender<()>,
+}
+
+impl Connecting {
+    /// The step the attempt is on, for the placeholder.
+    pub fn progress(&self) -> &ConnectProgress {
+        &self.progress
+    }
 }
 
 impl PanelSessionSlot {
@@ -312,7 +337,64 @@ impl PanelSessionSlot {
     pub fn connecting() -> (Self, ConnectProgress) {
         let progress: ConnectProgress =
             Arc::new(Mutex::new(ConnectStep::Starting { program: "the agent", }));
-        (Self::Connecting(Arc::clone(&progress)), progress)
+        let (retire, retired) = tokio::sync::oneshot::channel();
+        (Self::Connecting(Connecting { progress: Arc::clone(&progress),
+                                       retired:  Some(retired),
+                                       _retire:  retire, }),
+         progress)
+    }
+
+    /// Retires the slot, handing back the session it held if it was
+    /// `Ready` so the caller can stop its adapter.
+    ///
+    /// The one way a window lets go of a slot (#382). A `Connecting` slot
+    /// needs nothing back: retiring it fires the signal its connect task
+    /// waits on, which drops the half-made connection and the adapter with
+    /// it, and makes the task publish nothing. Teardown used to drop the
+    /// slot, swapping in a fresh `Connecting` placeholder, which left that
+    /// task running: it finished connecting, published into a slot no
+    /// window held, and ran the registration turn on an adapter nobody
+    /// could see, beside the one the next start spawned.
+    pub fn retire(&mut self) -> Option<Box<PanelSessionHandle>> {
+        match std::mem::replace(self, Self::Retired) {
+            Self::Ready(handle) => Some(handle),
+            Self::Connecting(_) | Self::Failed(_) | Self::Retired => None,
+        }
+    }
+
+    /// The retirement signal of a slot still `Connecting`, taken once by
+    /// the connect task. `None` when the slot is retired already, or when
+    /// another task has claimed it - either way, nothing for this attempt
+    /// to do.
+    fn take_retire_signal(&mut self) -> Option<tokio::sync::oneshot::Receiver<()>> {
+        match self {
+            Self::Connecting(connecting) => connecting.retired.take(),
+            Self::Ready(_) | Self::Failed(_) | Self::Retired => None,
+        }
+    }
+
+    /// Replaces a `Connecting` slot with the attempt's outcome. Hands
+    /// `outcome` back when the slot is no longer `Connecting` - retired
+    /// while the attempt ran - so the caller can stop what it started.
+    ///
+    /// The check and the write are one critical section: a retire on the
+    /// UI thread lands either before it, and the outcome comes back, or
+    /// after it, and retires the published handle. There is no third order
+    /// in which an adapter ends up in a slot no window holds.
+    fn publish(slot: &Mutex<Self>, outcome: Self) -> std::result::Result<(), Self> {
+        let mut slot = slot.lock();
+        if matches!(*slot, Self::Connecting(_)) {
+            *slot = outcome;
+            Ok(())
+        }
+        else {
+            Err(outcome)
+        }
+    }
+
+    /// Whether the slot is still waiting for this attempt.
+    fn is_connecting(&self) -> bool {
+        matches!(self, Self::Connecting(_))
     }
 
     /// Which lifecycle phase this slot is in, without borrowing the
@@ -327,9 +409,10 @@ impl PanelSessionSlot {
     /// the progress line live without a second dirty channel.
     pub fn phase(&self) -> PanelPhase {
         match self {
-            Self::Connecting(progress) => PanelPhase::Connecting(*progress.lock()),
+            Self::Connecting(connecting) => PanelPhase::Connecting(*connecting.progress.lock()),
             Self::Ready(_) => PanelPhase::Ready,
             Self::Failed(_) => PanelPhase::Failed,
+            Self::Retired => PanelPhase::Retired,
         }
     }
 
@@ -341,7 +424,7 @@ impl PanelSessionSlot {
     pub fn process_id(&self) -> Option<u32> {
         match self {
             Self::Ready(handle) => handle.process_id(),
-            Self::Connecting(_) | Self::Failed(_) => None,
+            Self::Connecting(_) | Self::Failed(_) | Self::Retired => None,
         }
     }
 
@@ -351,7 +434,7 @@ impl PanelSessionSlot {
     pub(crate) fn agent_identity(&self) -> AgentIdentity {
         match self {
             Self::Ready(handle) => AgentIdentity::from_info(handle.agent_info()),
-            Self::Connecting(_) | Self::Failed(_) => AgentIdentity::NotConnected,
+            Self::Connecting(_) | Self::Failed(_) | Self::Retired => AgentIdentity::NotConnected,
         }
     }
 
@@ -362,7 +445,7 @@ impl PanelSessionSlot {
     pub fn config_options(&self) -> Vec<ConfigOption> {
         match self {
             Self::Ready(handle) => handle.state().lock().config_options.clone(),
-            Self::Connecting(_) | Self::Failed(_) => Vec::new(),
+            Self::Connecting(_) | Self::Failed(_) | Self::Retired => Vec::new(),
         }
     }
 }
@@ -372,7 +455,11 @@ pub enum PanelPhase {
     Connecting(ConnectStep),
     Ready,
     Failed,
+    /// Torn down; never in a window's map, so never drawn.
+    Retired,
 }
 
+#[cfg(test)]
+mod retire_tests;
 #[cfg(test)]
 mod tests;
