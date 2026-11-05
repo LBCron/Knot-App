@@ -9,6 +9,7 @@
 //! fetches, parses and verifies. `knot-core::import::library` maps verified
 //! items onto `Persona` and `Prompt` records.
 
+pub mod contribution;
 pub mod error;
 pub mod fetcher;
 pub mod index;
@@ -16,6 +17,7 @@ pub mod location;
 pub mod resolve;
 pub mod verify;
 
+pub use contribution::{Contribution, ContributionKind, Draft};
 pub use error::{LibraryError, Result};
 pub use fetcher::{FolderFetcher, HttpsFetcher, LibraryFetcher, fetcher_for};
 pub use index::{Index, IndexItem, ItemKind};

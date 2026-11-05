@@ -16,6 +16,14 @@ pub enum LibraryError {
     UnsupportedFormat(u32),
     #[error("item body is empty after trimming front matter")]
     EmptyBody,
+    #[error("a title is one line of 1 to {0} characters")]
+    InvalidTitle(usize),
+    #[error("a description is one line of 1 to {0} characters")]
+    InvalidDescription(usize),
+    #[error("tag {0} is not 1 to 32 of a-z, 0-9 and -")]
+    InvalidTag(String),
+    #[error("an item carries at most {0} tags")]
+    TooManyTags(usize),
     #[error("item body has no closing `---` for its front matter")]
     UnterminatedFrontMatter,
     #[error("item size does not match the index: expected {expected}, got {actual}")]

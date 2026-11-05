@@ -18,11 +18,16 @@ use uuid::Uuid;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Prompt {
-    pub id:   Uuid,
-    pub name: String,
+    pub id:          Uuid,
+    pub name:        String,
     /// Stored exactly as entered, line breaks and variables included; the
     /// variables are expanded when the prompt is used, never here.
-    pub text: String,
+    pub text:        String,
+    /// One line on what the prompt is for. Knot-Library requires one, so it
+    /// comes with a library import and is asked for when submitting to the
+    /// library (#43); a prompt written in Knot starts without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 impl Prompt {
@@ -35,7 +40,8 @@ impl Prompt {
         }
         Some(Self { id: Uuid::new_v4(),
                     name,
-                    text })
+                    text,
+                    description: None })
     }
 }
 
