@@ -188,7 +188,9 @@ each agent remembers the mode you last chose.
 Resting the pointer on a link in a response, or in a Markdown pane, shows the address it goes to
 beside the pointer, so you can see where a link leads before you click it.
 
-Point at a message to act on it. A prompt you sent shows a copy button; an agent's response shows
+Point at a message to act on it. A prompt you sent shows a copy button and a save button, which opens
+the prompt editor with that prompt's text so you can name it and keep it in your prompt library; an
+agent's response shows
 its controls - Copy, Reply (quotes it into the composer), Scroll to your message, and Scroll to
 top. The latest response keeps its controls in view, so you can copy or reply to the answer you
 just got without hunting for them; earlier ones show theirs only while you point at them, and

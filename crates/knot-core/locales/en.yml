@@ -112,6 +112,7 @@ panel:
   copy_prompt: "Copy prompt"
   copy_response: "Copy response"
   copied_prompt: "Copied prompt to clipboard"
+  save_prompt: "Save to prompt library"
   copied_response: "Copied response to clipboard"
   reply_to_response: "Reply"
   copy_code: "Copy code"
