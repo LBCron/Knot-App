@@ -324,6 +324,19 @@ impl AgentStore {
         }
     }
 
+    /// Asks for `id` to start its next task on a fresh conversation (#331);
+    /// see [`Agent::fresh_context_requested`]. [`Self::restart`] carries it
+    /// out and clears it. Moves the revision, since the write comes from the
+    /// MCP server's thread and the window acts on it.
+    pub fn request_fresh_context(&mut self, id: Uuid) {
+        let changed = self.agent(id)
+                          .is_some_and(|agent| !agent.fresh_context_requested);
+        self.update(id, |agent| agent.fresh_context_requested = true);
+        if changed {
+            self.revise();
+        }
+    }
+
     pub fn update_metadata(&mut self, id: Uuid, metadata: BTreeMap<String, String>) {
         self.update(id, |agent| agent.metadata.extend(metadata));
     }
