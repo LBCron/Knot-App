@@ -1,7 +1,7 @@
 ---
 id: ADR-0005
 title: Agents report their working directory
-status: proposed
+status: accepted
 date: 2026-11-05
 tags: [agents, mcp, git]
 ---
