@@ -86,7 +86,8 @@ impl LibraryWindow {
                                                    let submission = Submission { kind: ContributionKind::Prompt,
                                                                                  id:   prompt.id,
                                                                                  name: prompt.name.clone(),
-                                                                                 body: prompt.text.clone(), };
+                                                                                 body: prompt.text.clone(),
+                                                                                 description: prompt.description.clone(), };
                                                    move |_, window, app| {
                                                        open_submit_dialog(submission.clone(), window, app)
                                                    }

@@ -290,22 +290,33 @@ fn the_personas_toolbar_buttons_sit_together(cx: &mut TestAppContext) {
     }
 }
 
-/// Each prompt and persona row offers to submit it to Knot-Library (#43),
-/// and the action asks for the rest in a dialog.
+/// Each prompt and persona row offers to submit it to Knot-Library (#43):
+/// the action asks for details in a dialog, and Review moves to the file
+/// with the dialog still open - nothing is published without the user
+/// confirming the reviewed file.
 #[gpui_kit::test]
 fn a_row_offers_to_submit_its_item_to_knot_library(cx: &mut TestAppContext) {
-    for (library, selector) in [(Library::Personas, "persona-submit-0"),
-                                (Library::Prompts, "prompt-submit-0")]
+    for (library, selector) in [(Library::Prompts, "prompt-submit-0"),
+                                (Library::Personas, "persona-submit-0")]
     {
         let window = cx.update(|cx| {
                            gpui_kit::init(cx);
                            WindowRegistry::install(cx);
                            install_settings(cx);
+                           // An empty folder: the lookup fails offline and
+                           // the item goes as new.
+                           let folder = tempfile::tempdir().expect("a library folder");
+                           cx.set_global(crate::library_window::LookupLocation(
+                               knot_library::Location::Folder { path: folder.path().to_owned() },
+                           ));
+                           std::mem::forget(folder);
                            crate::settings_global::write(cx, |settings| {
                                settings.restore_default_personas()
                                        .expect("the built-in personas restore");
-                               settings.add_prompt("Review", "Review it.")
-                                       .expect("the prompt is added");
+                               let id = settings.add_prompt("Review", "Review it.")
+                                                .expect("the prompt is added");
+                               settings.set_prompt_description(id, "Reviews the branch.")
+                                       .expect("the description is kept");
                            });
                            open_library_window(library, store(), messages(), cx);
                            cx.windows().last().copied().expect("the library window")
@@ -317,10 +328,29 @@ fn a_row_offers_to_submit_its_item_to_knot_library(cx: &mut TestAppContext) {
                            .unwrap_or_else(|| panic!("{selector} was not drawn"));
         window.simulate_click(button.center(), gpui_kit::Modifiers::none());
         window.run_until_parked();
+        let open = |window: &mut VisualTestContext| {
+            window.update(|window, app| {
+                      gpui_kit::component::WindowExt::has_active_dialog(window, app)
+                  })
+        };
+        assert!(open(&mut window), "{library:?}: the submit dialog opened");
+        assert!(window.debug_bounds("library-submit-review").is_none(),
+                "{library:?}: the dialog starts on the details step");
 
-        assert!(window.update(|window, app| {
-                          gpui_kit::component::WindowExt::has_active_dialog(window, app)
-                      }),
-                "{library:?}: the submit dialog opened");
+        // The description field has focus. A prompt already has one; a
+        // persona keeps none, so it is typed.
+        if library == Library::Personas {
+            window.simulate_input("Answers like a careful reviewer.");
+            window.run_until_parked();
+        }
+        window.update(|window, app| {
+                  window.dispatch_action(Box::new(gpui_kit::component::dialog::Confirm { secondary: false }),
+                                         app);
+              });
+        window.run_until_parked();
+        assert!(open(&mut window),
+                "{library:?}: the dialog stays open on the review step, unpublished");
+        assert!(window.debug_bounds("library-submit-review").is_some(),
+                "{library:?}: Review shows the file");
     }
 }

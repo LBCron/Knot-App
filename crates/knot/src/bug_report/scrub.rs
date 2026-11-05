@@ -85,7 +85,7 @@ static RULES: LazyLock<Vec<Rule>> = LazyLock::new(|| {
 
 /// `log` with everything [the module](self) lists removed. `home` is the
 /// user's home directory, replaced with `~` wherever it appears.
-pub(super) fn scrub(log: &str, home: Option<&str>) -> String {
+pub(crate) fn scrub(log: &str, home: Option<&str>) -> String {
     let home = home.and_then(home_pattern);
     log.split('\n')
        .map(|line| scrub_line(line, home.as_ref()))
@@ -151,7 +151,7 @@ fn home_pattern(home: &str) -> Option<Regex> {
 }
 
 /// The user's home directory, as the scrub needs it.
-pub(super) fn home_dir() -> Option<String> {
+pub(crate) fn home_dir() -> Option<String> {
     std::env::var("HOME").ok().filter(|home| !home.is_empty())
 }
 

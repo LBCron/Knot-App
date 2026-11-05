@@ -69,15 +69,23 @@ launch without a startup prompt.
 A persona or prompt you wrote can be offered to
 [Knot-Library](https://github.com/pilgrimagesoftware/Knot-Library), the shared
 collection Import… reads from. Click the pull request icon on its row in the Personas or
-Prompts window. A dialog asks for what the library needs and Knot does not keep:
+Prompts window. The dialog has two steps.
+
+**Details** asks for what the library needs:
 
 - **Title** - starts as the item's name. One line, at most 80 characters. It also
-  names the file: "Code review" becomes `prompts/code-review.md`.
-- **Description** - one line, at most 200 characters, saying what the item is for.
+  names a new file: "Code review" becomes `prompts/code-review.md`.
+- **Description** - one line, at most 200 characters, saying what the item is for. A
+  prompt keeps it for next time, and a prompt imported from the library arrives with
+  one.
 - **Tags** - optional, comma-separated, at most 10, each of `a-z`, `0-9` and `-`.
 
-"Open on GitHub" stays disabled until these pass. It opens GitHub's new-file page in
-Knot-Library with the file filled in:
+Meanwhile Knot checks whether the library already has the item. A prompt or persona
+imported from Knot-Library keeps its library id, and ids there are permanent, so an
+edited copy is an update to that file rather than a new item; the dialog says which file
+it updates.
+
+**Review** shows the file exactly as it will be proposed, and you can edit it:
 
 ```markdown
 ---
@@ -89,18 +97,25 @@ tags: [review, quality]
 Review the changes on {{branch}} ...
 ```
 
-Review it there and choose Propose changes. If you cannot write to the library, GitHub
-forks it for you and opens the pull request from the fork. Nothing leaves Knot until you
-do, and Knot needs neither the GitHub CLI nor a token for this.
+Check it for anything private. A prompt saved from a conversation holds the text as it
+was sent, with paths, branch names and host names filled in rather than as
+`{{folder}}`-style variables. The review step warns when the file looks like it holds
+your home folder, an email address or a credential.
 
-Caveats:
+Nothing leaves Knot until you choose Open on GitHub:
 
-- The file keeps the item's own id, so importing it back later finds it already held.
-  An item you imported from Knot-Library already has its id there, and the library's
-  check rejects a pull request that reuses one.
-- A file too long to fit in a web address (long persona instructions, for instance) is
-  copied to the clipboard instead, and the page opens empty: paste it into GitHub's
-  editor. The same happens if no browser opens.
+- A new item opens on GitHub's new-file page with the file filled in. Choose Propose
+  changes; if you cannot write to the library, GitHub forks it and opens the pull
+  request from the fork.
+- An update opens the library's existing file in GitHub's editor, with your version on
+  the clipboard: replace the contents with it and propose the change.
+- A new file too long to fit in a web address (long persona instructions, for instance)
+  is copied to the clipboard instead and the page opens empty: paste it in. The same
+  happens if no browser opens.
+
+Knot needs neither the GitHub CLI nor a token for this. If Knot-Library cannot be
+reached to check for the item, it goes as new, and the library's own check rejects a
+pull request that reuses an id it already has.
 
 ### The Bench window
 

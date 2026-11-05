@@ -185,6 +185,7 @@ impl LibraryWindow {
                                                 id,
                                                 name: persona.name.clone(),
                                                 body: persona.instructions.clone(),
+                                                description: None,
                                             };
                                             move |_, window, app| {
                                                 open_submit_dialog(submission.clone(), window, app)

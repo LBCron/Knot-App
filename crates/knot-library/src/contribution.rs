@@ -7,10 +7,10 @@
 //! user leaves for GitHub, saves a round trip through the library's own
 //! Check workflow for the mistakes Knot can see.
 //!
-//! What Knot cannot see is whether the id is already in the library. An item
-//! keeps its own id so that importing it back later recognises it as held;
-//! one that came from the library has that id there already, and the
-//! library's check rejects the pull request.
+//! An item keeps its own id, so importing it back later recognises it as
+//! held. Library ids are permanent, so an item whose id the library already
+//! has - one imported from it, edited since - is an update to that file
+//! ([`Contribution::updating`]), not a new item under a new name.
 
 use uuid::Uuid;
 
@@ -63,6 +63,8 @@ pub struct Contribution {
     description: String,
     tags:        Vec<String>,
     body:        String,
+    /// The library's path for this id, when it already has the item.
+    existing:    Option<String>,
 }
 
 /// What [`Contribution::new`] is built from, before checking.
@@ -96,16 +98,38 @@ impl Contribution {
                   title,
                   description,
                   tags,
-                  body: body.to_owned() })
+                  body: body.to_owned(),
+                  existing: None })
     }
 
     pub fn kind(&self) -> ContributionKind {
         self.kind
     }
 
-    /// The file's name: the title as a slug, or the id's first group when
-    /// the title has nothing a slug can keep (a title of emoji, say).
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+
+    /// This contribution as an update to the library's file at `path`,
+    /// which already holds this id.
+    #[must_use]
+    pub fn updating(mut self, path: impl Into<String>) -> Self {
+        self.existing = Some(path.into());
+        self
+    }
+
+    /// Whether this updates an item the library already has.
+    pub fn is_update(&self) -> bool {
+        self.existing.is_some()
+    }
+
+    /// The file's name: the existing file's for an update; otherwise the
+    /// title as a slug, or the id's first group when the title has nothing
+    /// a slug can keep (a title of emoji, say).
     pub fn file_name(&self) -> String {
+        if let Some(path) = &self.existing {
+            return path.rsplit('/').next().unwrap_or(path).to_owned();
+        }
         let slug = slug(&self.title);
         if slug.is_empty() {
             let id = self.id.to_string();
@@ -115,8 +139,12 @@ impl Contribution {
         format!("{slug}.md")
     }
 
-    /// The file's path in the library, `<kind-dir>/<slug>.md`.
+    /// The file's path in the library: the existing one for an update,
+    /// otherwise `<kind-dir>/<slug>.md`.
     pub fn path(&self) -> String {
+        if let Some(path) = &self.existing {
+            return path.clone();
+        }
         format!("{}/{}", self.kind.directory(), self.file_name())
     }
 

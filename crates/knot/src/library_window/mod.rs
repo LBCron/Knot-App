@@ -27,5 +27,7 @@ pub(crate) use panes::personas::PersonaUser;
 #[cfg(test)]
 pub(crate) use prompt_editor::PromptEditor;
 pub(crate) use prompt_editor::open_prompt_editor;
+#[cfg(test)]
+pub(crate) use submit::LookupLocation;
 pub(crate) use window::LibraryWindow;
 pub(crate) use window::open_library_window;

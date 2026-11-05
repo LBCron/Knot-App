@@ -92,3 +92,14 @@ fn the_body_must_not_be_blank() {
     assert!(matches!(Contribution::new(&draft("t", "d", "", " \n ")),
                      Err(LibraryError::EmptyBody)));
 }
+
+#[test]
+fn an_update_keeps_the_librarys_path_whatever_the_title() {
+    let item = Contribution::new(&draft("Renamed review", "d", "", "x")).unwrap()
+                                                                         .updating("prompts/code-review.md");
+
+    assert!(item.is_update());
+    assert_eq!(item.path(), "prompts/code-review.md");
+    assert_eq!(item.file_name(), "code-review.md");
+    assert!(item.markdown().contains(&format!("id: {ID}\n")));
+}

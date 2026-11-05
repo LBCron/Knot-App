@@ -107,7 +107,9 @@ fn import_items_adds_importable_persona_and_prompt() {
                              && p.name == "Research Assistant"));
     assert!(settings.prompts
                     .iter()
-                    .any(|p| p.id.to_string() == prompt_item.id));
+                    .any(|p| p.id.to_string() == prompt_item.id
+                             && p.description.as_deref() == Some("a library item")),
+            "an imported prompt keeps its library description (#43)");
 }
 
 #[test]
