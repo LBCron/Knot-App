@@ -21,12 +21,16 @@ pub(crate) struct LibraryWindow {
     /// The live agent store, for questions this window's own `Settings`
     /// snapshot can't answer truthfully - whether a persona is still
     /// assigned to an agent, which changes while this window is open.
-    pub(super) store:   Arc<Mutex<knot_agents::AgentStore>>,
-    pub(super) library: Library,
+    pub(super) store:    Arc<Mutex<knot_agents::AgentStore>>,
+    /// The message store, which opening an agent's workspace window needs -
+    /// a persona's "Used by" link goes to the agent (#365).
+    pub(super) messages: Arc<Mutex<knot_messaging::MessageStore>>,
+    pub(super) library:  Library,
 }
 
 /// Opens `library`'s window, or raises it if one is already open.
 pub(crate) fn open_library_window(library: Library, store: Arc<Mutex<knot_agents::AgentStore>>,
+                                  messages: Arc<Mutex<knot_messaging::MessageStore>>,
                                   cx: &mut App) {
     activate_or_open(library.window_key(), cx, move |cx| {
         let options = library_window_options(library, cx);
@@ -34,7 +38,9 @@ pub(crate) fn open_library_window(library: Library, store: Arc<Mutex<knot_agents
                     // Every window tracks the OS appearance, so a light/dark
                     // flip re-resolves the system palette and repaints.
                     observe_system_appearance(window);
-                    let view = cx.new(|_| LibraryWindow { store, library });
+                    let view = cx.new(|_| LibraryWindow { store,
+                                                          messages,
+                                                          library });
                     cx.new(|cx| Root::new(view, window, cx))
                 }) {
             Ok(window) => Some(AnyWindowHandle::from(window)),
