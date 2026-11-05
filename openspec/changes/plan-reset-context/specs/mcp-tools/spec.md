@@ -27,10 +27,18 @@ restart has happened. `plan-tasks` and `task-status` SHALL report
 - **WHEN** a task without `resetContext` is dispatched
 - **THEN** the assignee is not restarted
 
-### Requirement: A caller cannot reset its own context by dispatch
+### Requirement: A reset does not cut work short
 
 `dispatch-task` SHALL return `isError` true, leaving the task `ready`, when a
-`resetContext` task's recipient is the caller.
+`resetContext` task's recipient is the caller, or holds another task in any
+plan that is `dispatched` and not yet reported.
+
+#### Scenario: The assignee is still on another task
+
+- **WHEN** a `resetContext` task is dispatched to an agent idle while its
+  previous dispatched task awaits a reply
+- **THEN** the result has `isError` true, names that task, and the task stays
+  `ready`
 
 #### Scenario: Not to the caller
 

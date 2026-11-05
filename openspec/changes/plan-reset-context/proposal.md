@@ -17,7 +17,11 @@ that is what the plan wants; often a step should start clean (#331).
 - The task waits in the agent's inbox through the restart, and the inbox
   nudge waits for it, so the agent reads the task in the new conversation.
 - A caller cannot dispatch a `resetContext` task to itself: the restart
-  would end the turn that dispatched it.
+  would end the turn that dispatched it. Nor to an agent still holding
+  another dispatched task: idle while it waits on a reply, it has already
+  read that task, and the restart would lose it.
+- A restart clears an agent's self-set working directory (#375), so plans
+  should name the worktree in such a task's goal.
 - `task-status` and `plan-tasks` report `resetContext` on the tasks that
   carry it.
 

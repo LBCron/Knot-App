@@ -101,6 +101,18 @@ pub fn dispatch_task(ctx: DispatchContext<'_>, arguments: &serde_json::Value) ->
              yourself without resetContext, or assign it to another agent."
         ));
     }
+    // Nor while it holds another dispatched task: an agent idle in the
+    // middle of one - waiting on a reply - has already read that task, and
+    // a new conversation would lose it. Refused rather than deferred, since
+    // only the plan's owner knows when that task is over.
+    if dispatchable.fresh_context
+       && let Some(held) = ctx.graphs.in_flight_for(recipient)
+    {
+        return ToolCallResult::error(format!(
+            "Task '{task_id}' asks for a fresh conversation, but its assignee is still on task \
+             '{held}'. Complete that task first, or dispatch this one without resetContext."
+        ));
+    }
 
     // Delivery follows the existing messaging rules unchanged: the sender
     // must be registered, the recipient must share its workspace, shell

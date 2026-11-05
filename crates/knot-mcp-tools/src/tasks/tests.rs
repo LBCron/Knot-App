@@ -572,3 +572,28 @@ fn reset_context_is_reported_on_the_task() {
     assert_eq!(plan["tasks"][0]["resetContext"], true);
     assert!(plan["tasks"][1].get("resetContext").is_none());
 }
+
+/// #384 review: an assignee idle in the middle of another task - waiting
+/// on a reply - has read that task already, and a fresh conversation would
+/// lose it. The reset is refused until that task is reported.
+#[test]
+fn a_reset_context_task_waits_for_the_assignees_task_in_flight() {
+    let mut fx = fixture();
+    let worker = fx.worker.to_string();
+    body(&fx.plan(json!([{"id": "a", "goal": "Port it", "assignee": worker},
+                         {"id": "b", "goal": "Review it", "assignee": worker,
+                          "resetContext": true}])));
+    body(&fx.dispatch("a"));
+
+    let refused = fx.dispatch("b");
+    assert_eq!(refused.is_error, Some(true));
+    assert!(refused.content[0].text.contains("'a'"),
+            "the refusal names the task in flight: {}",
+            refused.content[0].text);
+    assert!(!fx.agents.agent(fx.worker).unwrap().fresh_context_requested);
+    assert_eq!(body(&fx.status())["tasks"][1]["state"], "ready");
+
+    body(&fx.complete("a", "done"));
+    body(&fx.dispatch("b"));
+    assert!(fx.agents.agent(fx.worker).unwrap().fresh_context_requested);
+}

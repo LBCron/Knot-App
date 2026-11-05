@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use knot_agents::AgentStore;
-use knot_tasks::TaskGraph;
+use knot_tasks::{TaskGraph, TaskId, TaskState};
 use uuid::Uuid;
 
 /// The committed plans, keyed by the agent that owns each.
@@ -43,6 +43,17 @@ impl GraphStore {
     pub fn prune(&mut self, agents: &AgentStore) {
         self.graphs
             .retain(|owner, _| agents.agent(*owner).is_some());
+    }
+
+    /// A task in any plan that was dispatched to `agent` and not yet
+    /// reported done or failed: work the agent may still be holding, even
+    /// while it sits idle waiting on a reply (#384 review).
+    pub fn in_flight_for(&self, agent: Uuid) -> Option<&TaskId> {
+        self.graphs
+            .values()
+            .flat_map(TaskGraph::tasks)
+            .find(|task| task.state == TaskState::Dispatched && task.dispatched_to == Some(agent))
+            .map(|task| &task.id)
     }
 
     /// How many plans are held. Test-facing: the observable behaviour is
