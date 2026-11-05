@@ -184,3 +184,49 @@ fn restart_all_leaves_a_stopped_agent_stopped(cx: &mut TestAppContext) {
             "a stopped agent is reset, not started");
     assert!(activated(&fixture, running), "a running one is restarted");
 }
+
+impl Fixture {
+    fn restart_for_fresh_context(&mut self) -> bool {
+        self.view.update(&mut self.window, |view, cx| {
+                     view.restart_for_fresh_context(cx)
+                 })
+    }
+}
+
+/// #331: a dispatched task asked for a fresh conversation, and the agent is
+/// between turns - it is restarted without its conversation, once.
+#[gpui_kit::test]
+fn a_fresh_context_request_restarts_an_idle_agent_once(cx: &mut TestAppContext) {
+    let mut fixture = window_with_conversations(2, cx);
+    let (asked, other) = (fixture.agents[0], fixture.agents[1]);
+    fixture.store.lock().request_fresh_context(asked);
+
+    assert!(fixture.restart_for_fresh_context());
+
+    assert_eq!(fixture.acp_session(asked), None);
+    assert_eq!(fixture.acp_session(other).as_deref(),
+               Some("acp-1"),
+               "only the one asked");
+    assert!(!fixture.restart_for_fresh_context(), "the request is spent");
+}
+
+/// Still on its previous step: the restart waits rather than cut it short.
+#[gpui_kit::test]
+fn a_fresh_context_request_waits_for_a_working_agent(cx: &mut TestAppContext) {
+    let mut fixture = window_with_conversations(1, cx);
+    let id = fixture.agents[0];
+    {
+        let mut store = fixture.store.lock();
+        store.set_state(id, knot_agents::AgentState::Running);
+        store.request_fresh_context(id);
+    }
+
+    assert!(!fixture.restart_for_fresh_context());
+    assert_eq!(fixture.acp_session(id).as_deref(), Some("acp-0"));
+
+    fixture.store
+           .lock()
+           .set_state(id, knot_agents::AgentState::Idle);
+    assert!(fixture.restart_for_fresh_context());
+    assert_eq!(fixture.acp_session(id), None);
+}

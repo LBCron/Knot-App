@@ -21,7 +21,7 @@ use crate::tasks::store::GraphStore;
 /// Grouped rather than passed as six arguments, per the project's
 /// argument-count convention.
 pub struct DispatchContext<'a> {
-    pub agents:     &'a AgentStore,
+    pub agents:     &'a mut AgentStore,
     pub graphs:     &'a mut GraphStore,
     pub messages:   &'a mut MessageStore,
     pub notifier:   &'a dyn DeliveryNotifier,
@@ -93,6 +93,27 @@ pub fn dispatch_task(ctx: DispatchContext<'_>, arguments: &serde_json::Value) ->
         }
     };
 
+    // A fresh conversation is a restart, and an agent cannot restart
+    // itself mid-turn and go on to read the task.
+    if dispatchable.fresh_context && recipient == caller.id {
+        return ToolCallResult::error(format!(
+            "Task '{task_id}' asks for a fresh conversation, which would end your own. Do it \
+             yourself without resetContext, or assign it to another agent."
+        ));
+    }
+    // Nor while it holds another dispatched task: an agent idle in the
+    // middle of one - waiting on a reply - has already read that task, and
+    // a new conversation would lose it. Refused rather than deferred, since
+    // only the plan's owner knows when that task is over.
+    if dispatchable.fresh_context
+       && let Some(held) = ctx.graphs.in_flight_for(recipient)
+    {
+        return ToolCallResult::error(format!(
+            "Task '{task_id}' asks for a fresh conversation, but its assignee is still on task \
+             '{held}'. Complete that task first, or dispatch this one without resetContext."
+        ));
+    }
+
     // Delivery follows the existing messaging rules unchanged: the sender
     // must be registered, the recipient must share its workspace, shell
     // agents cannot receive, and companion routing applies.
@@ -118,6 +139,12 @@ pub fn dispatch_task(ctx: DispatchContext<'_>, arguments: &serde_json::Value) ->
        && let Some(queue) = ctx.activation
     {
         queue.lock().push(recipient);
+    }
+    // After delivery, for the same reason: the task waits in the inbox
+    // through the restart, and the window nudges the agent to read it once
+    // it is back.
+    if dispatchable.fresh_context {
+        ctx.agents.request_fresh_context(recipient);
     }
 
     let graph = ctx.graphs

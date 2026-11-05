@@ -54,6 +54,7 @@ impl AgentStore {
                     idle_since: _,
                     awaiting_reason: _,
                     session_limit: _,
+                    fresh_context_requested: _,
                     status_text: _,
                     working_dir: _,
                     is_registered: _,

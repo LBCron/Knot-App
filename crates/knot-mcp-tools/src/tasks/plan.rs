@@ -25,7 +25,8 @@ pub fn task_info(task: &Task) -> TaskInfo {
                assignee,
                capabilities,
                depends_on: task.depends_on.iter().map(TaskId::to_string).collect(),
-               dispatched_to: task.dispatched_to.map(|id| id.to_string()) }
+               dispatched_to: task.dispatched_to.map(|id| id.to_string()),
+               reset_context: task.fresh_context }
 }
 
 fn parse_specs(agents: &AgentStore, caller: Uuid, raw: &[serde_json::Value])
@@ -65,6 +66,9 @@ fn parse_spec(agents: &AgentStore, caller: Uuid, raw: &serde_json::Value)
         spec = spec.after(dependencies.iter()
                                       .filter_map(serde_json::Value::as_str)
                                       .map(TaskId::new));
+    }
+    if raw.get("resetContext").and_then(serde_json::Value::as_bool) == Some(true) {
+        spec = spec.with_fresh_context();
     }
     Ok(spec)
 }

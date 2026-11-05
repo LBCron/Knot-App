@@ -256,7 +256,10 @@ impl WorkspaceWindow {
                         mcp_enabled: true,
                         latest_message: latest,
                         last_nudged: self.nudged_messages.get(&agent.id).copied(),
-                        idle: agent.state == knot_agents::AgentState::Idle,
+                        // An agent waiting on a fresh-context restart reads
+                        // its task after it, not before (#331).
+                        idle: agent.state == knot_agents::AgentState::Idle
+                              && !agent.fresh_context_requested,
                     };
                     app_state::inbox_prompt_message_id(check)
                         .map(|message_id| (agent.id, message_id))
