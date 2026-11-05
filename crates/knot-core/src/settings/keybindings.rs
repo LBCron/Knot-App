@@ -51,6 +51,12 @@ pub struct KeybindingSettings {
     pub toggle_artifacts:           Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub insert_prompt:              Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_personas:              Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_prompts:               Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub open_bench:                 Option<String>,
 }
 
 impl<'de> Deserialize<'de> for KeybindingSettings {
@@ -69,7 +75,10 @@ impl<'de> Deserialize<'de> for KeybindingSettings {
                   open_command_center:        chord("openCommandCenter"),
                   jump_to_bottom:             chord("jumpToBottom"),
                   toggle_artifacts:           chord("toggleArtifacts"),
-                  insert_prompt:              chord("insertPrompt"), })
+                  insert_prompt:              chord("insertPrompt"),
+                  open_personas:              chord("openPersonas"),
+                  open_prompts:               chord("openPrompts"),
+                  open_bench:                 chord("openBench"), })
     }
 }
 
@@ -102,11 +111,14 @@ mod tests {
             "focusInput": 7,
             "agentSelectModifiers": "cmd",
             "togglePullRequests": "cmd-alt-u",
+            "openBench": false,
+            "openPrompts": "ctrl-cmd-r",
             "somethingNew": true,
         });
         let settings: KeybindingSettings = serde_json::from_value(value).unwrap();
         assert_eq!(settings,
                    KeybindingSettings { toggle_pull_requests: Some("cmd-alt-u".into()),
+                                        open_prompts: Some("ctrl-cmd-r".into()),
                                         ..Default::default() });
     }
 }

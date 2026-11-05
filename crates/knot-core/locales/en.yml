@@ -374,6 +374,9 @@ keymap:
     jump_to_bottom: "Jump to bottom"
     toggle_artifacts: "Show or hide artifacts"
     insert_prompt: "Insert prompt"
+    open_personas: "Open Personas"
+    open_prompts: "Open Prompts"
+    open_bench: "Open Bench"
   fixed:
     quit: "Quit Knot"
     settings: "Settings"

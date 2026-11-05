@@ -76,6 +76,17 @@ earlier one is not lost. The files button in the Markdown section's header lists
 the files the agent has shown before, most recent first; choose one to read it
 again. The agent's context menu has the same list under **Markdown Files**.
 
+#### Approving and reviewing a Markdown file
+
+A Markdown file shown with `display-markdown` offers **Approve** and **Review** in
+its header. Approve sends the agent `Approved: <file>`, naming the file (relative to
+the agent's folder when it is inside it), so the agent knows exactly what was
+approved even if something else is waiting. Review starts a reply in the composer
+that names the file; type your comments under it and press **Submit Review**, or,
+for an agent in the panel, press **Approve** instead to approve with those comments:
+the agent receives `Approved: <file>, with these review comments:` followed by
+them.
+
 #### Checklists
 
 Use a checklist when an agent needs several answers or confirmations from the
