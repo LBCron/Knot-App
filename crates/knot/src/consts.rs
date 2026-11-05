@@ -86,10 +86,6 @@ pub(crate) const ARTIFACT_PANEL_DEFAULT_SPLIT: f32 = 0.5;
 pub(crate) const ARTIFACT_PANEL_MIN_SPLIT: f32 = 0.15;
 pub(crate) const ARTIFACT_PANEL_MAX_SPLIT: f32 = 0.85;
 
-/// The message the markdown section's Approve sends: the go-ahead, verbatim
-/// from `MarkdownPanelView`. Sent to the agent, so not localized.
-pub(crate) const ARTIFACT_APPROVE_PROMPT: &str = "approved let's do it";
-
 /// The bounds the markdown section's font size controls step within, from
 /// `MarkdownPanelView`'s `A` buttons.
 pub(crate) const MARKDOWN_FONT_SIZE_MIN: i32 = 10;

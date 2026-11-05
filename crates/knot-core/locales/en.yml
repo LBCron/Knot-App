@@ -375,6 +375,9 @@ keymap:
     jump_to_bottom: "Jump to bottom"
     toggle_artifacts: "Show or hide artifacts"
     insert_prompt: "Insert prompt"
+    open_personas: "Open Personas"
+    open_prompts: "Open Prompts"
+    open_bench: "Open Bench"
   fixed:
     quit: "Quit Knot"
     settings: "Settings"
@@ -1076,6 +1079,7 @@ git_panel:
 # diagram at once. Its two sections are drawn by the panes that were ported
 # first; these are the container's own words.
 artifact_panel:
+  earlier_files: "Earlier files from this agent"
   title: "Artifacts"
   # The expand control names the state it moves to, not the one it is in,
   # which is how every other toggle in the window is worded.

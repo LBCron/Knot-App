@@ -25,6 +25,7 @@ pub(super) mod checklist;
 pub(super) mod closed;
 pub(super) mod controls;
 pub(super) mod document;
+pub(super) mod history;
 pub(super) mod layout;
 pub(super) mod render;
 pub(super) mod review;
