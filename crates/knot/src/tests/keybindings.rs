@@ -13,9 +13,9 @@ use knot_core::ShortcutModifiers;
 use parking_lot::Mutex;
 use tempfile::TempDir;
 
-use crate::app_bootstrap::OpenCommandCenter;
 use crate::app_bootstrap::Quit;
 use crate::app_bootstrap::install_actions_and_keys;
+use crate::app_bootstrap::{OpenBench, OpenCommandCenter, OpenPersonas, OpenPrompts};
 use crate::keymap::*;
 use crate::window_registry::WindowKey;
 use crate::window_registry::WindowRegistry;
@@ -70,6 +70,27 @@ fn the_defaults_reach_their_actions(cx: &mut TestAppContext) {
           assert_bound(cx, "ctrl-cmd-down", &JumpToBottom);
           assert_bound(cx, "cmd-alt-a", &ToggleArtifacts);
           assert_bound(cx, "cmd-alt-i", &InsertPrompt);
+          assert_bound(cx, "cmd-alt-shift-p", &OpenPersonas);
+          assert_bound(cx, "cmd-alt-shift-i", &OpenPrompts);
+          assert_bound(cx, "cmd-alt-b", &OpenBench);
+      });
+}
+
+/// #223: the library windows' shortcuts are customized like any other, and
+/// a stored one replaces the default rather than adding to it.
+#[gpui_kit::test]
+fn a_stored_library_shortcut_replaces_its_default(cx: &mut TestAppContext) {
+    let dir = TempDir::new().expect("a temporary settings root");
+    let mut settings = knot_core::Settings::with_store_root(dir.path());
+    settings.keybindings.open_bench = Some("ctrl-cmd-b".to_owned());
+    settings.keybindings.open_personas = Some("ctrl-cmd-e".to_owned());
+    cx.update(|cx| {
+          install(settings, cx);
+          assert_bound(cx, "ctrl-cmd-b", &OpenBench);
+          assert_not_bound_to(cx, "cmd-alt-b", &OpenBench);
+          assert_bound(cx, "ctrl-cmd-e", &OpenPersonas);
+          assert_not_bound_to(cx, "cmd-alt-shift-p", &OpenPersonas);
+          assert_bound(cx, "cmd-alt-shift-i", &OpenPrompts);
       });
 }
 
