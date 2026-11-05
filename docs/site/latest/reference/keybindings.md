@@ -14,8 +14,11 @@ Knot's keyboard shortcuts, grouped by where they act, with the default each one 
 | --- | --- |
 | ⌥⌘1 … ⌥⌘9 | Select workspace 1–9: bring that workspace's window to the front and focus it, if it is open. |
 | ⌥⌘0 | Open the Command Center, or raise it if it is already open. |
+| ⌥⇧⌘P | Open the Personas window, or raise it if it is already open. |
+| ⌥⇧⌘I | Open the Prompts window, or raise it if it is already open. |
+| ⌥⌘B | Open the Bench window, or raise it if it is already open. |
 
-Selecting a workspace works from any Knot window, and even with no Knot window focused. It only raises a window that is already open; it never opens one. The Command Center shortcut is the key equivalent shown beside Window > Command Center.
+Selecting a workspace works from any Knot window, and even with no Knot window focused. It only raises a window that is already open; it never opens one. The Command Center, Personas, Prompts and Bench shortcuts open their windows from anywhere, with or without a Knot window focused, and are the key equivalents shown beside those menu items. Personas takes ⇧ on ⌥⌘P, which toggles Changes; Prompts is Insert prompt's ⌥⌘I with ⇧.
 
 ## Workspace and agent navigation
 

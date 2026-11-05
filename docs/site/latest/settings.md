@@ -203,7 +203,7 @@ on other platforms.
 | Edit | Undo (Cmd+Z), Redo (Shift-Cmd+Z), Cut (Cmd+X), Copy (Cmd+C), Paste (Cmd+V) |
 | View | Dashboard (Option-Cmd+O), Pull Requests (Option-Cmd+P), Focus Agent Input (Cmd+L), Jump to Bottom (Ctrl-Cmd+Down), Artifacts (Option-Cmd+A), Select Agent, Enter Full Screen (Ctrl-Cmd+F) |
 | Agents | The same items as the selected agent's row menu, acting on the selected agent |
-| Window | Command Center (Option-Cmd+0), Workspaces (Cmd+0), Personas, Prompts, Bench, Minimize (Cmd+M), Zoom, then macOS's list of open windows |
+| Window | Command Center (Option-Cmd+0), Workspaces (Cmd+0), Personas (Option-Shift-Cmd+P), Prompts (Option-Shift-Cmd+I), Bench (Option-Cmd+B), Minimize (Cmd+M), Zoom, then macOS's list of open windows |
 | Help | Knot Help (Cmd+?), Report an Issue… |
 
 The Edit menu's items operate on the focused text field and are enabled exactly
